@@ -4,7 +4,7 @@
 
 Hackachusetts 2026 · Track: **Climate Tech & Clean Energy** · Built with Kiro
 
-Demo URL: https://shipping-route-sim.streamlit.app/
+**[Live Demo](https://shipping-route-sim.streamlit.app/)**
 
 Demo video (under 3 minutes): PASTE_PUBLIC_VIDEO_LINK
 
