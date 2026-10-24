@@ -232,9 +232,11 @@ class Constants:
     bunker_price_usd_per_t: ProvenancedValue     # 876.5, sourced
     reference_draft_ft: ProvenancedValue         # 50.0, sourced (context)
     canal_wait_days_default: ProvenancedValue    # 0, assumption; seeds the UI Panama waiting control only, never a core fallback
-    # Fuel RATES for waiting/canal operation are NOT present in constants.csv.
-    waiting_fuel_t_per_day: ProvenancedValue | None = None   # unresolved input (Req 7.5)
-    canal_fuel_t_per_day: ProvenancedValue | None = None     # unresolved input (Req 7.5)
+    # Optional fuel RATES for waiting/canal operation. constants.csv supplies both (ICCT-derived,
+    # approximate, canal rate a lower bound); if a row is absent the field is None and the
+    # dependent line item stays an unresolved input (Req 7.5).
+    waiting_fuel_t_per_day: ProvenancedValue | None = None
+    canal_fuel_t_per_day: ProvenancedValue | None = None
     # Raw context values (ranges, gatun levels, lost-containers estimate) kept but NOT used in v1:
     context: dict[str, ProvenancedValue] = field(default_factory=dict)
 ```

@@ -137,9 +137,14 @@ Defaults: 100 containers per 10 cm (analyst estimate) and 1.7 TEU per container
 - **Fuel and CO2 stay fixed when payload falls.** Draft loss changes only loaded
   TEU and the per-TEU figures. A lighter ship would burn somewhat less fuel; the
   model does not capture that, so cost per TEU is, if anything, overstated.
-- **Waiting and canal-operation fuel rates are not in the data.** A positive
-  waiting or canal duration leaves those fuel line items unavailable, and cost
-  and CO2 then use sailing fuel only, labeled as a partial estimate.
+- **Waiting and canal fuel rates are size-bin averages.** Waiting at anchor
+  burns 12.69 t/day and canal transit 18.96 t/day. Both are derived from the
+  ICCT 2013-2015 shipping-emissions methodology (auxiliary engine and boiler
+  power for 8,000-12,000 TEU container ships) and marked `approximate`. They
+  are not specific to the modeled ship. The canal rate is a lower bound because
+  it leaves out main-engine propulsion during the transit. If either rate is
+  removed from `data/constants.csv`, the affected totals show as unavailable
+  and the app shows a labeled sailing-only estimate instead.
 - **Route distances are approximate** (searoute shortest paths) with no weather
   routing, port calls, or canal availability checks.
 - **The route set is small and fixed.** `data/routes.csv` holds 10 origin-destination pairs (Asia to the US East Coast and Gulf). Each Panama and Suez distance came from `searoute 1.4.3` run offline with approximate approach points, and each was checked to pass through its own canal and not around a cape. To add a route, generate both rows the same way and keep status `approximate`; do not hand-type distances.

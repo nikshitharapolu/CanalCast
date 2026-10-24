@@ -431,6 +431,15 @@ _COMPUTATIONAL_KEYS = {
     "canal_wait_days_default",
 }
 
+#: Optional computational keys: parsed to float and carried as named
+#: :class:`Constants` fields when present, but never required. When a row is
+#: absent the field stays ``None`` and the dependent fuel line item is
+#: reported unavailable (Requirement 7.5); nothing is substituted.
+_OPTIONAL_COMPUTATIONAL_KEYS = {
+    "waiting_fuel_t_per_day",
+    "canal_fuel_t_per_day",
+}
+
 
 def _build_constants(
     frame: pd.DataFrame, errors: list[ValidationError]
@@ -461,7 +470,7 @@ def _build_constants(
         raw_status = row.get("status", "")
         notes = _clean(row.get("notes"))
 
-        if key in _COMPUTATIONAL_KEYS:
+        if key in _COMPUTATIONAL_KEYS or key in _OPTIONAL_COMPUTATIONAL_KEYS:
             parsed = _parse_float(raw_value)
             if parsed is None:
                 errors.append(
@@ -533,6 +542,8 @@ def _build_constants(
         bunker_price_usd_per_t=computational["bunker_price_usd_per_t"],
         reference_draft_ft=computational["reference_draft_ft"],
         canal_wait_days_default=computational["canal_wait_days_default"],
+        waiting_fuel_t_per_day=computational.get("waiting_fuel_t_per_day"),
+        canal_fuel_t_per_day=computational.get("canal_fuel_t_per_day"),
         context=context,
     )
 
