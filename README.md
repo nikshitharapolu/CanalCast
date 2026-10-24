@@ -18,7 +18,7 @@ pip install -r requirements.txt
 streamlit run app.py        # opens http://localhost:8501
 ```
 
-No account, API key or network access is needed. Run the tests with `python -m pytest` (102 tests). Requires Python 3.11 or newer.
+After downloading the repository and installing dependencies, the app runs locally without an account, API key, or internet connection. Run the tests with `python -m pytest` (102 tests). Requires Python 3.11 or newer.
 
 ## What it does
 
@@ -113,7 +113,7 @@ The `.kiro/` folder at the root holds the specs and steering used to build this 
 | Task execution | Tasks were grouped into dependency waves. Independent tasks ran in parallel through sub-agents; tasks editing the same file ran in sequence. The spec enforced build order: the calculation core and its tests had to pass before any Streamlit code. |
 | Steering | `product.md` and `tech.md` in `.kiro/steering/` state the non-negotiables: Python computes every number, missing values stay missing, every input has a status, no shipping-line names. |
 | Property-based testing | 18 Hypothesis property tests (at least 100 examples each) drawn from the design's correctness properties, plus worked-example, edge-case and UI rendering tests. 102 tests in total. |
-| Agent hooks, MCP, Powers | Not used. MCP was ruled out deliberately: the product makes no network calls at runtime. |
+| Agent hooks, MCP, Powers | Not used; the project was built using Kiro’s spec workflow, steering files, and task execution. |
 
 Two examples of the spec doing real work:
 
@@ -131,7 +131,7 @@ data/                       Read-only CSV inputs (routes, constants, factors, ..
 tests/                      Core test suite (unit + property-based + UI rendering)
 .kiro/
     specs/canalcast/        Requirements, design, tasks
-    steering/               product.md, tech.md
+    steering/               product.md, tech.md, structure.md
 src/canalcast/
     models.py               Typed domain records + provenance
     loader.py               All file I/O with provenance (no network calls)
