@@ -1,0 +1,8 @@
+date,item,value,unit,source,status,notes
+1982-12,historic_peak_oni,2.2,degC,Purdue MRCC (NOAA ONI since 1950),sourced,Nov-Dec 1982
+1998-01,historic_peak_oni,2.3,degC,Purdue MRCC (NOAA ONI since 1950),sourced,Nov-Dec 1997
+2015-12,historic_peak_oni,2.6,degC,Purdue MRCC (NOAA ONI since 1950),sourced,Nov-Dec 2015
+2026-06-11,noaa_el_nino_advisory,issued,,NOAA CPC (via a science bulletin),sourced,advisory replaced the watch; very-strong odds then 63%
+2026-08-13,prob_strongest_on_record,69,percent,NOAA CPC via CNN/Shipping Telegraph,sourced,on the relative index (RONI); forecast peak late fall/early winter
+2026-08-13,prob_very_strong_fall_winter,90,percent,NOAA CPC via Shipping Telegraph,sourced,reported as "greater than 90%"
+2026-07-22,acp_prob_severe_el_nino,81,percent,Panama Canal Authority press release (via Supply Chain Dive),sourced,up from 25% in April

@@ -1,0 +1,6 @@
+state,max_draft_ft,daily_slots,period,source,status,notes
+normal_reference,50.0,36,design capacity,"ACP monthly operations summaries: sustainable capacity ~36-38 transits/day; 50 ft Neopanamax design draft",sourced,"use 36 (range 36-38)"
+current_oct2026,49.0,33,"Sep 28 / Oct 15 2026","ACP Advisory A-36-2026 (49.0 ft effective Sep 28); 33rd slot opens Oct 15 (ICIS / ACP)",sourced,
+peak_2026_so_far,48.0,32,"Sep 15-28 2026","ACP draft notice effective Aug 26 (48 ft); slots cut to 32 from Sep 15 (Seatrade Maritime)",sourced,"sources disagree on when slots first fell from 36 to 34 (late Jul per S&P Global vs Sep 4 per Seatrade); confirm in the Advisories list"
+recovery_jun2024,45.0,32,"Jun 2024","ACP Advisory A-16-2024 (45.0 ft effective May 30 2024); 32 total transits/day from Jun 1 2024",sourced,"useful as the recovery leg of the 2023-24 replay"
+severe_2023_24,44.0,22,"Dec 2023 - Feb 2024 trough","S&P Global (about 22/day at most severe); freightnews (lows of 24 transits, draft below 44 ft)",approximate,"verify exact draft low and slot count in the 2023-24 Advisories; some announced schedules went as low as 18/day"

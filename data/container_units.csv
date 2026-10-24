@@ -1,0 +1,3 @@
+container_type,teu_per_container,source,status,retrieved_on,notes
+20ft,1,https://www.bts.gov/dictionary/dictionary/list,sourced,2026-10-24,TEU is a twenty-foot equivalent unit.
+40ft,2,https://www.bts.gov/dictionary/dictionary/list,sourced,2026-10-24,FEU is a forty-foot equivalent unit; two TEU.

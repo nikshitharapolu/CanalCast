@@ -1,0 +1,4 @@
+fuel_type,co2_t_per_fuel_t,scope,unit,source,status,retrieved_on,notes
+HFO,3.114,tank_to_wake_CO2_only,t_CO2/t_fuel,https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.346%2878%29.pdf,sourced,2026-10-24,"IMO MEPC.346(78), Annex 8 page 29. Excludes upstream emissions and non-CO2 gases."
+LFO,3.151,tank_to_wake_CO2_only,t_CO2/t_fuel,https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.346%2878%29.pdf,sourced,2026-10-24,"IMO MEPC.346(78), Annex 8 page 29. Excludes upstream emissions and non-CO2 gases."
+MDO,3.206,tank_to_wake_CO2_only,t_CO2/t_fuel,https://wwwcdn.imo.org/localresources/en/KnowledgeCentre/IndexofIMOResolutions/MEPCDocuments/MEPC.346%2878%29.pdf,sourced,2026-10-24,"IMO MEPC.346(78), Annex 8 page 29. Excludes upstream emissions and non-CO2 gases."

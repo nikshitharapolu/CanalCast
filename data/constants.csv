@@ -1,0 +1,22 @@
+key,value,unit,source,status,notes
+reference_draft_ft,50.0,ft,ACP / freightnews (50 ft design max draught),sourced,full Neopanamax draft
+containers_lost_per_10cm_draft_cut,100,containers per sailing,Seatrade Maritime analysts (Jul 2026) for Asia-USEC carriers,analyst_estimate,expose as a slider
+ship_capacity_teu,10000,TEU,matches the New Panamax fuel anchor below,assumption,Neopanamax ships run up to ~12500 TEU
+load_factor,0.85,fraction,illustrative,assumption,share of capacity loaded before draft losses
+default_speed_kn,18,knots,Transport Geography: slow steaming is 18-20 kn,approximate,user-adjustable
+base_speed_kn,22,knots,maritimepage.com (10000 TEU New Panamax at 22 kn),secondary_source,reference speed for the fuel curve
+base_fuel_t_per_day,175,t/day,maritimepage.com quotes 150-200 t/day at 22 kn; midpoint used,approximate,
+base_fuel_t_per_day_low,150,t/day,maritimepage.com,secondary_source,
+base_fuel_t_per_day_high,200,t/day,maritimepage.com,secondary_source,
+speed_exponent,3,-,derived: (21/24)^3 = 0.67 and 150/225 = 0.67 (Rodrigue/Carriou 2009 points for an 8000 TEU ship),derived,cubic law fits the two sourced points
+check_fuel_t_per_day_at_18kn,109,t/day,maritimepage.com generic container-ship table,secondary_source,sanity target only: the model gives ~96 t/day at 18 kn
+bunker_price_usd_per_t,876.5,USD/t,Ship & Bunker 20-port VLSFO average on Oct 6 2026 (via ShipUniverse),sourced,volatile; Singapore $904 on Oct 7 and Rotterdam $682.50; expose as a slider
+co2_t_per_t_fuel_hfo,3.114,t CO2/t fuel,EU MRV default (Delegated Reg. 2016/2071),sourced,use for VLSFO/HFO
+co2_t_per_t_fuel_mgo,3.206,t CO2/t fuel,EU MRV default (Delegated Reg. 2016/2071),sourced,
+co2_t_per_t_fuel_lng,2.750,t CO2/t fuel,EU MRV default (Delegated Reg. 2016/2071),sourced,
+canal_wait_days_default,0,days,no sourced value,assumption,user slider; do not present as data
+panamax_locks_capacity_per_day,34-36,vessels,ACP monthly operations summaries,sourced,
+neopanamax_locks_capacity_per_day,9-11,vessels,ACP monthly operations summaries,sourced,
+sustainable_total_capacity_per_day,36-38,vessels,ACP monthly operations summaries,sourced,
+gatun_level_jul19_2026_ft,84.6,ft,ACP Gatun Water Level Indicators page,sourced,Neopanamax draft 49.5 ft that day
+gatun_level_oct2023_ft,79.7,ft,World Grain / USDA GTR,sourced,about 7% below the prior 5-year October average
