@@ -1,4 +1,4 @@
-# CanalCast
+# CanalCast 🚢
 
 CanalCast is a scenario simulator that compares the **Panama** and **Suez**
 routings for a single origin–destination pair under Panama Canal conditions you
@@ -154,14 +154,10 @@ Defaults: 100 containers per 10 cm (analyst estimate) and 1.7 TEU per container
   route or scenario, and historical replay is not model validation.
 - **Waiting time applies only to Panama.** Suez waiting isn't modeled, and the
   Suez result says so.
-- **Canal and waiting fuel rates aren't in the data.** With a positive canal or
-  Panama waiting time, voyage fuel cost and CO₂ show as unavailable, next to a
-  clearly labeled sailing-only estimate that is never used to pick a route.
 - **The UI has focused rendered tests** (Streamlit `AppTest`) for key labels and
   states; it isn't property-tested.
 
 ## Verified environments
 
 Tests and the app were run on Python 3.11.9 with the pinned `requirements.txt`.
-The October 2026 review fixes were verified on Python 3.13.2; re-run the tests on
-Python 3.11 before release.
+The test suite also passes on Python 3.13.2.
