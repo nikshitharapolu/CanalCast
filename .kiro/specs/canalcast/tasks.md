@@ -41,7 +41,7 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
   - [x] 4.1 Implement time functions: `sailing_time_hours` and `journey_time_hours`
     - Sailing time = distance/speed when distance > 0 and speed > 0; `Unavailable` naming invalid speed when speed ≤ 0; `Unavailable` naming missing distance when absent
     - Journey time = sailing + canal + waiting when all present and ≥ 0; `Unavailable` naming the offending duration when any is missing/negative; waiting derived only from its explicit input, never from a booking-slot limit
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
+    - _Requirements: 6.1–6.11_
   - [x] 4.2 Implement fuel functions: `fuel_rate_t_per_day`, `sailing_fuel_t`, and waiting/canal fuel line items
     - Cubic curve `base_fuel * (speed/base_speed)^exponent` using loaded constants only, no alternate ship profile; sailing fuel = rate × sailing days
     - Waiting/canal fuel as distinct line items (never folded into sailing fuel). Zero duration ⇒ zero fuel even when its fuel rate is absent (always resolvable); positive duration + absent rate ⇒ `Unavailable` (unresolved input). Apply the identical rule to both waiting and canal fuel
@@ -89,8 +89,8 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - **Property 3: sailing fuel monotonic in distance** — _Requirements 18.3_
     - **Property 4: higher speed strictly shortens sailing time** — _Requirements 18.4_
     - **Property 5: higher speed strictly increases sailing fuel** — _Requirements 18.5_
-    - **Property 9: invalid speed yields Unavailable, not a number** — _Requirements 6.7, 18.7_
-    - **Property 10: missing distance disables journey time without substitution** — _Requirements 6.6, 18.8_
+    - **Property 9: invalid speed yields Unavailable, not a number** — _Requirements 6.9, 18.7_
+    - **Property 10: missing distance disables journey time without substitution** — _Requirements 6.8, 18.8_
     - **Property 11: zero loaded TEU ⇒ undefined per-TEU cost, excluded from cost selection** — _Requirements 8.4, 11.9, 18.9_
     - **Property 12: container-to-TEU conversion exact and type-guarded** — _Requirements 5.3, 5.4_
     - **Property 15: CO2 requires an exactly matching fuel type** — _Requirements 9.2, 9.3, 9.4_
@@ -157,8 +157,9 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - _Requirements: 3.1–3.4, 7.4–7.5, 8.1, 8.5, 9.1, 11.4; Review finding: 1 (partial fuel presented as voyage totals)._
   - [ ] 15.2 Correct deadline and eligibility states
     - Distinguish missing deadline/undetermined feasibility, no available option meeting the deadline, no available option with resolvable journey time, and both available routes missing. Say "neither route meets the deadline" only when both available routes have resolved times and both miss; identify the faster available route and select none.
+    - Implement the ordered outcome table in design.md "Deadline status and selection outcomes" (selected, all_available_miss, feasibility_undetermined, priority_metric_unavailable, no_available_option, comparison_rejected).
     - Add regression tests for missing-deadline and Suez-excluded scenarios.
-    - _Requirements: 3.1–3.4, 6.8, 11.3–11.5; Review finding: 2 (deadline-state collapse)._
+    - _Requirements: 3.1–3.4, 6.10–6.11, 11.3–11.5; Design: "Deadline status and selection outcomes"; Review finding: 2 (deadline-state collapse)._
   - [ ] 15.3 Restore the original MVP draft boundary
     - Hide/remove draft-loss controls and outputs from the Streamlit MVP and keep `Scenario` defaults off; retain future-v2 core code only as dormant functionality. If explicitly enabled with a missing loss slope or another required input, make payload and dependent per-TEU outputs `Unavailable` instead of retaining base payload or injecting a hard-coded default.
     - Make draft copy conditional and add regression tests proving the MVP treats draft as context only; defer the version-2 UI activation outside the MVP.
@@ -176,6 +177,11 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - Keep v1 local-only; remove Community Cloud instructions or mark them clearly future/out-of-scope so they do not conflict with localhost binding. Replace deprecated `use_container_width` usage.
     - Re-run `compileall` and the full pinned pytest suite; record that Python 3.11 validation remains required if it is unavailable locally.
     - _Requirements: 4.2–4.5, 14.3–14.5, 15.1–15.3, 16.2–16.5, 19.3, 19.5–19.8; Review findings: 8–9 plus rendered coverage for findings 1–7._
+  - [ ] 15.7 Apply waiting time to the Panama route only; mark Suez waiting as not modeled
+    - Core (`models.py`, `calculations.py`, `comparison.py`, `results.py`): add a frozen `NotModeled(reason)` type and make `journey_time_hours` take a required waiting argument. `compute_option` reads `waiting_duration_h` only for Panama. Suez uses `SUEZ_WAITING_NOT_MODELED` for both waiting fields, computes total voyage fuel as sailing + canal, and adds the "Suez waiting time (not modeled)" exclusion and `waiting_not_modeled_disclosure`. A missing or invalid waiting value disables only Panama's journey time and its dependent outputs, names `waiting_duration_h`, and leaves Suez computed. Never fill a missing waiting value with zero.
+    - UI and explanation (`controls.py`, `views.py`, `explain.py`): label the control "Panama waiting time (days)" with help text that it applies only to the Panama route and Suez waiting isn't modeled. Render `NotModeled` as "Not modeled", never as 0 or "unavailable", and show the Suez disclosure.
+    - Tests: write Property 16 as one Hypothesis test tagged `# Feature: canalcast, Property 16: ...`. Suez journey time stays unchanged as waiting varies, and Panama satisfies `math.isclose(jt(w2), jt(w1) + (w2 - w1), rel_tol=1e-9)`. Worked example: Shanghai → New York, 18 kn, 12 h canal time on both routes, 40-day deadline, priority "fastest". 3 days of Panama waiting selects Panama (28.1 vs 29.2 days); 5 days selects Suez (30.1 vs 29.2 days); the break-even is 96.7 h. Also test that a missing waiting value leaves Panama undetermined with no false "neither route" message while Suez still computes, and that the Suez result is identical whether waiting is present, zero, missing, or invalid.
+    - _Requirements: 6.5–6.7, 6.11–6.13, 7.7, 13.1, 15.2, 18.10; Design: Property 16 and "Deadline status and selection outcomes"; Baseline report finding 10 (`reports/2026-10-24-baseline-metrics.md`)._
 
 ## Notes
 
@@ -203,9 +209,10 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     { "id": 11, "tasks": ["13.1"] },
     { "id": 12, "tasks": ["15.1", "15.5"] },
     { "id": 13, "tasks": ["15.2"] },
-    { "id": 14, "tasks": ["15.3"] },
-    { "id": 15, "tasks": ["15.4"] },
-    { "id": 16, "tasks": ["15.6"] }
+    { "id": 14, "tasks": ["15.7"] },
+    { "id": 15, "tasks": ["15.3"] },
+    { "id": 16, "tasks": ["15.4"] },
+    { "id": 17, "tasks": ["15.6"] }
   ]
 }
 ```
