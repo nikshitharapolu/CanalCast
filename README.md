@@ -1,66 +1,126 @@
-# CanalCast 🚢
+# CanalCast
 
-CanalCast is a scenario simulator that compares the **Panama** and **Suez**
-routings for a single origin–destination pair under Panama Canal conditions you
-select (draft limit, booking slots, speed, load factor, bunker price, waiting
-time, deadline, and selection priority). **It is not a forecast.** Every
-displayed number is computed by typed Python functions in a pure calculation
-core — nothing is predicted or invented. The tool reports **fuel cost** (not
-total shipping cost) and **tank-to-wake CO₂** (fuel-combustion emissions, not
-lifecycle); tolls, insurance, and surcharges are excluded and disclosed in the
-app.
+**Panama or Suez when the canal tightens?** A scenario simulator that compares the two routings for Asia to US East Coast and Gulf container trades under Panama Canal conditions you choose.
 
-## Requirements
+Hackachusetts 2026 · Track: **Climate Tech & Clean Energy** · Built with Kiro
+Demo video (under 3 minutes): PASTE_PUBLIC_VIDEO_LINK
 
-- **Python 3.11+** (the project targets Python 3.11 per `tech.md`; it also runs
-  on newer CPython such as 3.14).
-- Dependencies are listed and pinned to exact versions in
-  [`requirements.txt`](./requirements.txt).
+<!-- Add a screenshot once the UI is final:
+![CanalCast comparing Panama and Suez](docs/screenshot.png)
+-->
 
-## Local run
-
-1. (Optional) create and activate a virtual environment:
-
-   ```bash
-   python -m venv .venv
-   # Windows (PowerShell)
-   .venv\Scripts\Activate.ps1
-   # macOS / Linux
-   source .venv/bin/activate
-   ```
-
-2. Install the pinned dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Launch the app (entry point is `app.py`):
-
-   ```bash
-   streamlit run app.py
-   ```
-
-   If the `streamlit` console script is not on your `PATH`, use the module form
-   instead:
-
-   ```bash
-   python -m streamlit run app.py
-   ```
-
-The app serves on <http://localhost:8501> by default. CanalCast v1 is
-**local only** — it exposes no public endpoint (Req 19.3).
-
-## Run the tests
+## Quick start (for judges)
 
 ```bash
+git clone https://github.com/nikshitharapolu/CanalCast.git
+cd CanalCast
 pip install -r requirements.txt
-python -m pytest        # or: pytest
+streamlit run app.py        # opens http://localhost:8501
 ```
 
-The pure calculation core is fully tested with both property-based (Hypothesis)
-and worked-example/edge-case tests. The Streamlit UI is built on top of this
-tested core.
+No account, API key or network access is needed. Run the tests with `python -m pytest` (102 tests). Requires Python 3.11 or newer.
+
+## What it does
+
+You pick one of 10 lanes (Shanghai, Busan, Hong Kong or Singapore to New York, Boston, Savannah or Houston), set the voyage inputs (speed, load factor, bunker price, Panama waiting time, canal transit time, deadline, selection priority) and choose a Panama Canal condition. CanalCast then compares Panama with Suez and reports, for each route:
+
+- journey time
+- voyage fuel cost, and fuel cost per loaded TEU
+- tank-to-wake (fuel-combustion) CO₂
+- whether the route meets your deadline
+
+**It is a scenario tool, not a forecast.** Every displayed number is computed by typed Python functions in a pure calculation core. Nothing is predicted or invented, and every input shows its value, unit, source or assumption, and status (sourced, approximate, assumption or derived).
+
+Other behavior worth knowing:
+
+- **One metric at a time.** The route is chosen by fastest, lowest fuel cost per TEU, or lowest CO₂, among routes that meet the deadline. Metrics are never blended into a score, and ties say which rule broke them.
+- **Distinct failure messages.** A missing deadline, no available route, and every available route missing the deadline each get their own message.
+- **Honest degradation.** If a required input is missing, the affected calculation is disabled and the screen says what is needed. Nothing is replaced by zero. A partial figure appears only as a labeled sailing-only estimate and is never used to pick a route.
+- **Plain-language explanation** of at most 120 words, generated deterministically from the computed result. There is no language-model call at runtime.
+- **El Niño context.** Historical ONI and RONI series are shown as two separate lines, as context only.
+
+### Worked example
+
+Shanghai to Boston at 18 knots, 85% load factor, $876.50 per tonne, 12 hours of canal transit and a 30-day (720 hour) deadline. Only Panama waiting time changes:
+
+| Panama waiting | Panama time | Panama $/TEU | Suez time | Suez $/TEU | Chosen (fastest) |
+|---|---|---|---|---|---|
+| 0 days | 611.1 h | $247.7 | 693.7 h | $281.7 | Panama |
+| 3 days | 683.1 h | $251.6 | 693.7 h | $281.7 | Panama |
+| 4 days | 707.1 h | $252.9 | 693.7 h | $281.7 | Suez |
+| 5 days | 731.1 h | $254.2 | 693.7 h | $281.7 | Suez (Panama misses the deadline) |
+
+With "fastest", Suez takes over once Panama waiting passes about 3.4 days (82.6 hours). With "lowest fuel cost per TEU", Panama stays cheaper at every waiting time shown, but at 5 days it misses the deadline, so every priority picks Suez. The tool shows both facts instead of one verdict.
+
+## How the numbers work
+
+- **Sailing time** = distance ÷ speed.
+- **Fuel** follows one documented curve: 175 t/day at 22 knots, scaled by (speed ÷ 22)³. Waiting and canal-transit fuel are separate line items.
+- **Voyage fuel cost** = total fuel × bunker price. **Cost per TEU** divides that by loaded TEU (capacity × load factor).
+- **CO₂** = total fuel × the IMO tank-to-wake factor for the selected fuel.
+- **Waiting time applies to Panama only.** The Suez result states that Suez waiting is not modeled, so no one reads its time as including queueing.
+
+## Optional draft-based cargo loss (tested core code, off in the interface)
+
+The core includes an opt-in model that turns a tighter Panama draft into lost payload, for the Panama option only:
+
+```
+shortfall_ft    = 50.0 (reference draft) - canal-state draft, not below 0
+containers_lost = shortfall_ft x 30.48 / 10 x containers-lost-per-10cm
+TEU_lost        = containers_lost x average TEU per container
+loaded TEU      = capacity x load factor - TEU_lost   (never below 0)
+```
+
+Defaults are 100 containers per 10 cm (an analyst estimate for Asia to US East Coast carriers, Seatrade Maritime, July 2026) and 1.7 TEU per container (an assumption). In the October 2026 preset it removes about 518 TEU from the Panama payload and raises Panama cost per TEU from about $248 to $264, while fuel and CO₂ tonnes stay fixed.
+
+An independent review found that the first version could fail open when inputs were missing and that its on-screen wording contradicted itself. Both were fixed, and it now makes dependent figures unavailable instead. It was then hidden from the MVP interface. **In this version, the draft-limit and booking-slot presets are shown as context and do not change the results.** Turning the loss model on in the interface is a deliberate next step.
+
+## Data and provenance
+
+All data is local CSV under [`data/`](./data). **No network calls are made at runtime.**
+
+| Data | Source |
+|---|---|
+| Route distances (10 lanes, 20 rows) | Generated offline with `searoute 1.4.3` from approximate approach points. Each Panama row was checked to pass through Panama and each Suez row through Suez, not around a cape. Status: approximate. |
+| Panama Canal draft and booking-slot states, events, transits | Panama Canal Authority advisories and monthly operations data (pancanal.com), plus trade-press reports for the 2023-24 drought. Status: sourced or approximate. |
+| Fuel curve and ship | Secondary-source figures for a 10,000 TEU New Panamax ship at 22 knots. Ship size and load factor are assumptions. |
+| Waiting and canal fuel rates (12.69 and 18.96 t/day) | Derived from the ICCT 2013-2015 shipping-emissions methodology (auxiliary engine and boiler power, 8,000-12,000 TEU container ships). Approximate. The canal rate is a lower bound. |
+| Bunker price ($876.50/t) | Ship & Bunker 20-port VLSFO average, 6 October 2026. A slider, because it is volatile. |
+| CO₂ factors | IMO MEPC.346(78), tank-to-wake CO₂ only. |
+| Container to TEU | US Bureau of Transportation Statistics definitions. |
+| ONI and RONI El Niño series, 2022-2026 | NOAA Climate Prediction Center. |
+
+When a required value is missing, it stays missing: the affected calculation is disabled and the app states what is needed.
+
+## Model limitations
+
+- **Not a forecast.** It computes the consequences of the scenario you choose. Historical replay is not model validation.
+- **Fuel cost only.** Tolls, insurance, carrier surcharges and other costs are excluded and disclosed in the app. CO₂ is tank-to-wake, not lifecycle.
+- **Presets are context in this version.** Changing the draft limit or booking-slot preset does not change the results. Booking slots are never converted into waiting time; waiting is an explicit input.
+- **Waiting and canal fuel rates are size-bin averages** from a 2017 methodology, not figures for the modeled ship. Their effect is small next to sailing fuel (about $1 per TEU at 12 hours of canal transit).
+- **Draft-loss assumptions.** The slope and the TEU-per-container factor are assumptions. The loss model assumes the 10,000 TEU ship at 85% load would otherwise load to the full 50 ft reference draft. A ship loaded below that could lose less or nothing.
+- **Fuel and CO₂ stay fixed when payload falls,** so cost per TEU is, if anything, overstated.
+- **Distances are approximate** shortest paths, with no weather routing, port calls or canal-availability checks. The set of 10 lanes is fixed. To add a lane, generate both route rows with the same tool and keep status `approximate`; do not hand-type distances.
+- **Testing scope.** The interface has focused rendered tests (Streamlit `AppTest`), not property tests. It has not been tested with real shippers.
+
+## Built with Kiro
+
+The `.kiro/` folder at the root holds the specs and steering used to build this project.
+
+| Kiro feature | How we used it |
+|---|---|
+| IDE spec workflow | Spec at `.kiro/specs/canalcast`, written Requirements-First: 20 numbered requirements, a design with 16 numbered correctness properties, and 54 tasks, all complete. Each task cites the requirements it implements. |
+| Task execution | Tasks were grouped into dependency waves. Independent tasks ran in parallel through sub-agents; tasks editing the same file ran in sequence. The spec enforced build order: the calculation core and its tests had to pass before any Streamlit code. |
+| Steering | `product.md` and `tech.md` in `.kiro/steering/` state the non-negotiables: Python computes every number, missing values stay missing, every input has a status, no shipping-line names. |
+| Property-based testing | 18 Hypothesis property tests (at least 100 examples each) drawn from the design's correctness properties, plus worked-example, edge-case and UI rendering tests. 102 tests in total. |
+| Agent hooks, MCP, Powers | Not used. MCP was ruled out deliberately: the product makes no network calls at runtime. |
+
+Two examples of the spec doing real work:
+
+- **Draft cargo loss.** Wanting tighter draft to change cargo and cost reversed a documented non-goal. We added Requirement 20, a design addendum and tasks before any code, then built it off by default with a regression test.
+- **Waiting time.** A review found that waiting was applied to both routes, so no Panama condition could ever change the winner. The fix started in the requirements ("waiting applies to Panama only") and was verified with a property test.
+
+Honest lesson: the first build passed 61 tests while its default screen presented a sailing-only fuel figure as the voyage total, because our own test had encoded that fallback as intended. An independent review caught it. Spec-driven development gave us traceability and a place to record decisions before code existed; it did not replace review. During development none of the property tests failed, so they guarded invariants but did not find a bug our example tests had missed.
 
 ## Project layout
 
@@ -68,7 +128,10 @@ tested core.
 app.py                      Streamlit entry point (wires loader -> core -> UI)
 requirements.txt            Pinned dependencies
 data/                       Read-only CSV inputs (routes, constants, factors, ...)
-tests/                      Core test suite (unit + property-based)
+tests/                      Core test suite (unit + property-based + UI rendering)
+.kiro/
+    specs/canalcast/        Requirements, design, tasks
+    steering/               product.md, tech.md
 src/canalcast/
     models.py               Typed domain records + provenance
     loader.py               All file I/O with provenance (no network calls)
@@ -76,88 +139,17 @@ src/canalcast/
     comparison.py           Route comparison and selection
     results.py              Result structures
     explain.py              Deterministic (<=120-word) explanation
-    ui/                      Streamlit controls, views, and charts
+    ui/                     Streamlit controls, views, and charts
 ```
 
-The core modules (`calculations`, `comparison`, `results`, `models`, `explain`)
-perform no file or network I/O; only `loader.py` reads from `data/`. The UI
-layer imports the core, and the core never imports Streamlit.
+The core modules (`calculations`, `comparison`, `results`, `models`, `explain`) perform no file or network I/O, and a test enforces that by reading their imports. Only `loader.py` reads from `data/`. The UI imports the core; the core never imports Streamlit.
 
-## Deployment (Streamlit)
+## Deployment
 
-The entry point is **`app.py`**. A standard Streamlit deployment runs:
+CanalCast v1 runs **locally only** (Requirement 19.3): `.streamlit/config.toml` binds the server to `localhost`. Hosted deployment, including Streamlit Community Cloud, is out of scope for v1 because it creates a public endpoint that needs its own access decision. The Quick start above is the supported way to run and test it.
 
-```bash
-streamlit run app.py
-```
-
-CanalCast v1 runs **locally only** (Req 19.3): `.streamlit/config.toml` binds the
-server to `localhost`. Hosted deployment, including Streamlit Community Cloud,
-is out of scope for v1 because it creates a public endpoint. Adding it later
-needs its own access-control decision.
-
-## Data & provenance
-
-All data is local CSV under [`data/`](./data). Every model input carries
-provenance — a source/status (sourced, approximate, assumption, or derived) and
-data date. **No network calls are made at runtime.** When a required value is
-missing it stays missing: the affected calculation is disabled and the app
-states what is needed, rather than substituting zero or an invented number.
-
-## Optional draft-based cargo loss (off by default)
-
-The sidebar toggle **Model draft-based cargo loss (v2)** is off by default; with it
-off, the canal draft is shown as context only and no result changes with the
-preset. When on, for the **Panama option only**:
-
-```
-shortfall_ft     = 50.0 (reference draft) - canal-state draft, clamped at 0
-containers_lost  = shortfall_ft x 30.48 / 10 x containers-lost-per-10cm
-TEU_lost         = containers_lost x average TEU per container
-loaded TEU       = capacity x load factor - TEU_lost   (never below 0)
-```
-
-Defaults: 100 containers per 10 cm (analyst estimate) and 1.7 TEU per container
-(assumption). Both are adjustable in the sidebar and disclosed next to the results.
-
-## Model limitations
-
-- **Not a forecast.** It computes the consequences of the scenario you choose.
-- **Fuel cost only.** Tolls, insurance, carrier surcharges and other costs are
-  excluded. CO2 is tank-to-wake fuel combustion, not lifecycle.
-- **Draft-loss slope is an assumption.** The 100 containers per 10 cm figure is an
-  analyst estimate for Asia-USEC carriers (Seatrade Maritime, Jul 2026). It is
-  applied linearly to the whole shortfall and is not a measurement for the
-  modeled ship.
-- **Container-to-TEU factor is an assumption** (1.7 TEU per lost container; a
-  20 ft container is 1 TEU and a 40 ft container is 2 TEU).
-- **Ship applicability is not established.** The loss model assumes the modeled
-  10,000-TEU ship at 85% load would otherwise load to the full 50 ft reference
-  draft. A ship loaded below that draft could lose less, or nothing.
-- **Fuel and CO2 stay fixed when payload falls.** Draft loss changes only loaded
-  TEU and the per-TEU figures. A lighter ship would burn somewhat less fuel; the
-  model does not capture that, so cost per TEU is, if anything, overstated.
-- **Waiting and canal fuel rates are size-bin averages.** Waiting at anchor
-  burns 12.69 t/day and canal transit 18.96 t/day. Both are derived from the
-  ICCT 2013-2015 shipping-emissions methodology (auxiliary engine and boiler
-  power for 8,000-12,000 TEU container ships) and marked `approximate`. They
-  are not specific to the modeled ship. The canal rate is a lower bound because
-  it leaves out main-engine propulsion during the transit. If either rate is
-  removed from `data/constants.csv`, the affected totals show as unavailable
-  and the app shows a labeled sailing-only estimate instead.
-- **Route distances are approximate** (searoute shortest paths) with no weather
-  routing, port calls, or canal availability checks.
-- **The route set is small and fixed.** `data/routes.csv` holds 10 origin-destination pairs (Asia to the US East Coast and Gulf). Each Panama and Suez distance came from `searoute 1.4.3` run offline with approximate approach points, and each was checked to pass through its own canal and not around a cape. To add a route, generate both rows the same way and keep status `approximate`; do not hand-type distances.
-- **Booking slots are not transits and do not set waiting time.** Waiting is an
-  explicit input.
-- **Historical ONI/RONI charts are context only.** They do not change with the
-  route or scenario, and historical replay is not model validation.
-- **Waiting time applies only to Panama.** Suez waiting isn't modeled, and the
-  Suez result says so.
-- **The UI has focused rendered tests** (Streamlit `AppTest`) for key labels and
-  states; it isn't property-tested.
+If `streamlit` is not on your `PATH`, use `python -m streamlit run app.py`. To use a virtual environment: `python -m venv .venv`, then activate it (`.venv\Scripts\Activate.ps1` on Windows PowerShell, `source .venv/bin/activate` on macOS or Linux).
 
 ## Verified environments
 
-Tests and the app were run on Python 3.11.9 with the pinned `requirements.txt`.
-The test suite also passes on Python 3.13.2.
+Tests and the app were run on Python 3.11.9 with the pinned `requirements.txt`. The test suite also passes on Python 3.13.2.
