@@ -1,0 +1,1 @@
+Python 3.11, Streamlit, pandas, plotly, pytest, hypothesis. Pure functions in src/, no I/O in calculation modules. Type hints. Pin requirements.txt.
