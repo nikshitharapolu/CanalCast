@@ -511,6 +511,73 @@
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792865524765
       }
+    ],
+    "14.1 Extend `Scenario` and add a `DraftLoss` result type": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866751116
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866883760
+      }
+    ],
+    "14.2 Implement the pure `draft_cargo_loss` function (`calculations.py`)": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866886422
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866987089
+      }
+    ],
+    "14.3 Integrate draft loss into `compute_option` (`comparison.py`) and `OptionResult`": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866990773
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867171103
+      }
+    ],
+    "14.4 Tests: default-off regression + draft-loss worked example and properties": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867174679
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867311034
+      }
+    ],
+    "14.5 UI: draft-loss toggle, slider, and disclosure (`controls.py`, `views.py`)": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867314602
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867593787
+      }
+    ],
+    "14. Version 2 — optional draft-based cargo-loss modeling (Requirement 20)": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867593909
+      }
     ]
   }
 }

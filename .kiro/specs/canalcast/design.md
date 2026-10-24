@@ -554,3 +554,59 @@ No public network endpoint beyond localhost; no runtime AI features, agent-coord
 - **Draft is context only.** The canal-state max draft is carried as `draft_context_ft` with a fixed not-modeled disclosure and never enters any calculation; `containers_lost_per_10cm_draft_cut` is loaded as context and never read by the core. This keeps v1 free of cargo-loss and severity modeling (Requirement 10, 19.4).
 
 - **Non-numeric constants are kept as context strings.** Range-valued keys (e.g. `34-36`) are stored as `str` in `ProvenancedValue.value` and never coerced to float, so the loader cannot crash on them; only the explicit computational keys are parsed numerically.
+
+## Version 2 addendum — optional draft-based cargo-loss modeling (Requirement 20)
+
+This addendum is additive and OFF by default. When the draft-loss toggle is off, the v1 behavior and all existing tests are unchanged (draft stays context only, Requirement 10). When on, it supersedes Requirement 10.2/10.3 for the Panama option only.
+
+### Scenario additions
+
+`Scenario` gains three optional fields, all defaulting to the v1 behavior:
+
+- `draft_loss_enabled: bool = False` — master toggle (Req 20.1).
+- `containers_lost_per_10cm: float | None = None` — slider override; when `None`, the loaded `containers_lost_per_10cm_draft_cut` constant is used (Req 20.5).
+- `avg_teu_per_container: float = 1.7` — assumption factor converting lost containers to TEU (Req 20.6). Status `assumption`.
+
+### New pure function (`calculations.py`)
+
+```python
+def draft_cargo_loss(
+    option: Literal["panama", "suez"],
+    canal_state_max_draft_ft: float | None,
+    reference_draft_ft: float | None,
+    containers_lost_per_10cm: float | None,
+    avg_teu_per_container: float | None,
+    *, enabled: bool,
+) -> DraftLoss | Unavailable:
+    ...
+```
+
+Returns a small frozen `DraftLoss(shortfall_ft, containers_lost, teu_lost)` dataclass, or `Unavailable` when a required input is missing while enabled. Rules:
+
+- `enabled is False` or `option != "panama"` -> `DraftLoss(0.0, 0.0, 0.0)` (no loss; Suez never draft-reduced, Req 20.7).
+- `shortfall_ft = reference_draft_ft - canal_state_max_draft_ft`; clamp to `0.0` when `<= 0` (Req 20.2, 20.3).
+- `ten_cm_units = shortfall_ft * 30.48 / 10.0` (1 ft = 30.48 cm).
+- `containers_lost = ten_cm_units * containers_lost_per_10cm` (Req 20.4).
+- `teu_lost = containers_lost * avg_teu_per_container` (Req 20.6).
+- Missing reference/estimate/factor while enabled -> `Unavailable` naming the input (never substituted).
+
+### Loaded-TEU integration (`comparison.compute_option`)
+
+`compute_option` computes `base_loaded = loaded_teu(capacity, load_factor)` exactly as today, then, when `draft_loss_enabled`:
+
+- `adjusted = max(0.0, base_loaded - teu_lost)` (Req 20.7).
+- `adjusted == 0` -> Infeasible_Result, `fuel_cost_per_teu_usd = Unavailable("loaded TEU is zero")`, reusing the existing Req 11.9 path (Req 20.8). No negative TEU ever (Req 20.8).
+- Fuel, cubic curve, journey time, and the CO2 FACTOR are untouched; only `loaded_teu` and the per-TEU figure change (Req 20.10). CO2 tonnes are unchanged because they derive from fuel, not TEU; cost-per-TEU rises as TEU falls.
+
+`OptionResult` gains optional labeled fields `draft_shortfall_ft`, `containers_lost`, `teu_lost` (each a float or `None`/`Unavailable`), plus a disclosure string noting the analyst-estimate and assumption basis (Req 20.9). These default to the no-loss/absent values so v1 result construction is unaffected.
+
+### UI (`controls.py`, `views.py`)
+
+- `controls.py`: a "Model draft-based cargo loss (v2)" toggle defaulting to OFF; when on, a containers-lost-per-10cm `st.slider` seeded from the loaded estimate, and an average-TEU-per-container number input (Req 20.11).
+- `views.py`: when enabled, show `Draft_Shortfall_Ft`, `Containers_Lost`, `TEU_Lost` and the analyst-estimate + assumption disclosures alongside the Panama option (Req 20.11). When off, the panel is unchanged.
+
+### Testing
+
+- Default-off regression: with `draft_loss_enabled=False` every existing metric is byte-for-byte the v1 value (guards the 51 existing tests).
+- Worked example: 50.0 -> 49.0 ft shortfall = 1.0 ft = 3.048 ten-cm units x 100 = 304.8 containers x 1.7 = ~518.16 TEU lost; loaded 8500 -> ~7981.84; cost-per-TEU rises accordingly. Within 1e-9.
+- Properties: shortfall clamped at zero for draft >= reference; Suez never reduced; TEU never negative (Infeasible when it would be); enabling the toggle never changes CO2 tonnes or journey time.

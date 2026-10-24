@@ -126,6 +126,22 @@ class OptionResult:
             (Requirement 8.8).
         input_provenance: Provenance for each input behind this option
             (Requirement 11.10).
+        draft_loss_enabled: Whether the optional draft-based cargo-loss
+            adjustment was applied to this option. ``False`` by default, which
+            preserves exact v1 behavior and leaves the remaining draft-loss
+            fields ``None`` (Requirement 20.9).
+        draft_shortfall_ft: The draft shortfall in feet that drove the loss when
+            draft loss is enabled, else ``None`` (``None`` when disabled, not
+            applicable, or the loss could not be computed) (Requirement 20.9).
+        containers_lost: Estimated containers lost to the draft shortfall when
+            draft loss is enabled, else ``None`` (Requirement 20.9).
+        teu_lost: TEU lost (``containers_lost`` times the average-TEU-per-
+            container assumption) when draft loss is enabled, else ``None``
+            (Requirement 20.9).
+        draft_loss_disclosure: Fixed disclosure, present only when draft loss is
+            enabled, stating the adjustment rests on an analyst-estimate
+            containers-lost figure and an assumption average-TEU-per-container
+            factor; ``None`` when disabled (Requirement 20.9).
     """
 
     option: Literal["panama", "suez"]
@@ -154,6 +170,14 @@ class OptionResult:
     cost_label: str = "fuel cost"  # never "total shipping cost" (Req 8.8)
     # provenance for each input behind this option (Req 11.10):
     input_provenance: Mapping[str, ProvenancedValue] = field(default_factory=dict)
+
+    # Optional draft-based cargo-loss adjustment (Requirement 20). All default
+    # to the no-loss state so existing v1 construction is unaffected (Req 20.9):
+    draft_loss_enabled: bool = False
+    draft_shortfall_ft: float | None = None
+    containers_lost: float | None = None
+    teu_lost: float | None = None
+    draft_loss_disclosure: str | None = None
 
 
 @dataclass(frozen=True)

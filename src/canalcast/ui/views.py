@@ -266,6 +266,37 @@ def _render_option_column(option: OptionResult, label: str) -> None:
 
     st.metric("Deadline status", _deadline_label(option))
 
+    # Req 20.11: optional draft-based cargo-loss figures. Only rendered when the
+    # adjustment is enabled for this option (Panama); when disabled the panel is
+    # unchanged, preserving v1 behavior.
+    _render_draft_loss(option)
+
+
+def _render_draft_loss(option: OptionResult) -> None:
+    """Render the draft-loss figures and disclosure for an option (Req 20.11).
+
+    When :attr:`OptionResult.draft_loss_enabled` is ``True``, displays
+    Draft_Shortfall_Ft (ft), Containers_Lost, and TEU_Lost — each formatted via
+    the shared :func:`_format_metric` helper — and the analyst-estimate/
+    assumption disclosure text. When draft loss is disabled, renders nothing so
+    the panel is identical to v1.
+
+    Args:
+        option: The per-option result whose draft-loss figures to render.
+    """
+    import streamlit as st
+
+    if not option.draft_loss_enabled:
+        return
+
+    st.markdown("**Draft-based cargo loss**")
+    st.metric("Draft shortfall", _format_metric(option.draft_shortfall_ft, "ft"))
+    st.metric("Containers lost", _format_metric(option.containers_lost, "containers"))
+    st.metric("TEU lost", _format_metric(option.teu_lost, "TEU"))
+
+    if option.draft_loss_disclosure:
+        st.caption(option.draft_loss_disclosure)
+
 
 def _render_selection(result: ComparisonResult) -> None:
     """Render the selection outcome and tie-break disclosure (Req 11.5/11.8).

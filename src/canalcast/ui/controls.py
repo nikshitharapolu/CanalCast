@@ -88,6 +88,21 @@ SLOTS_MIN: int = 0
 
 HOURS_PER_DAY: float = 24.0
 
+# Draft-loss control bounds and defaults (Requirement 20.11). The slider is
+# seeded from the loaded ``containers_lost_per_10cm_draft_cut`` constant when
+# available, falling back to this analyst-estimate default.
+CONTAINERS_LOST_PER_10CM_DEFAULT: float = 100.0
+CONTAINERS_LOST_PER_10CM_MIN: float = 0.0
+CONTAINERS_LOST_PER_10CM_MAX: float = 500.0
+CONTAINERS_LOST_PER_10CM_STEP: float = 10.0
+AVG_TEU_PER_CONTAINER_DEFAULT: float = 1.7
+AVG_TEU_PER_CONTAINER_MIN: float = 0.5
+AVG_TEU_PER_CONTAINER_STEP: float = 0.1
+
+#: Context key under which the Data_Loader stores the analyst-estimate
+#: containers-lost-per-10cm figure (``data/constants.csv``).
+CONTAINERS_LOST_CONSTANT_KEY = "containers_lost_per_10cm_draft_cut"
+
 #: Session-state key under which the last fully valid assembled scenario is kept
 #: so an out-of-range entry can fall back to it (Requirement 13.7).
 LAST_VALID_SCENARIO_KEY = "canalcast_last_valid_scenario"
@@ -250,6 +265,38 @@ def _in_range(
     return True
 
 
+def containers_lost_seed(load_result: LoadResult) -> float:
+    """Return the seed for the containers-lost-per-10cm slider (Req 20.11).
+
+    Reads the analyst-estimate ``containers_lost_per_10cm_draft_cut`` figure from
+    the loaded constants' ``context`` map and parses it to a float. When the
+    value is absent or cannot be parsed, falls back to
+    :data:`CONTAINERS_LOST_PER_10CM_DEFAULT` (100) so the slider always has a
+    sensible starting point. Pure: no Streamlit.
+
+    Args:
+        load_result: The loaded required/optional data.
+
+    Returns:
+        The seed value in containers per 10 cm, clamped to the slider's
+        ``[CONTAINERS_LOST_PER_10CM_MIN, CONTAINERS_LOST_PER_10CM_MAX]`` range.
+    """
+    seed = CONTAINERS_LOST_PER_10CM_DEFAULT
+    context = load_result.required.constants.context
+    pv = context.get(CONTAINERS_LOST_CONSTANT_KEY)
+    if pv is not None:
+        try:
+            seed = float(pv.value)
+        except (TypeError, ValueError):
+            seed = CONTAINERS_LOST_PER_10CM_DEFAULT
+    # Keep the seed inside the slider bounds so Streamlit does not reject it.
+    if seed < CONTAINERS_LOST_PER_10CM_MIN:
+        seed = CONTAINERS_LOST_PER_10CM_MIN
+    if seed > CONTAINERS_LOST_PER_10CM_MAX:
+        seed = CONTAINERS_LOST_PER_10CM_MAX
+    return seed
+
+
 # --------------------------------------------------------------------------- #
 # Intermediate container for the raw control readings
 # --------------------------------------------------------------------------- #
@@ -277,6 +324,16 @@ class ControlReadings:
         fuel_type: Selected fuel type.
         missing: Plain-language messages naming missing required inputs.
         out_of_range: Plain-language messages naming out-of-range inputs.
+        draft_loss_enabled: Whether the optional draft-based cargo-loss
+            adjustment is active (Requirement 20.11). Defaults to ``False`` so a
+            ``ControlReadings`` built without draft-loss inputs assembles a
+            scenario identical to v1.
+        containers_lost_per_10cm: Explicit override for the containers-lost-per-
+            10cm estimate, or ``None`` to use the loaded constant. ``None`` by
+            default (Requirement 20.5/20.11).
+        avg_teu_per_container: Average TEU per lost container assumption
+            (Requirement 20.6). Defaults to ``1.7`` to match the
+            :class:`~canalcast.models.Scenario` default.
     """
 
     od_pair: ODPair | None
@@ -292,6 +349,9 @@ class ControlReadings:
     fuel_type: str
     missing: tuple[str, ...] = field(default_factory=tuple)
     out_of_range: tuple[str, ...] = field(default_factory=tuple)
+    draft_loss_enabled: bool = False
+    containers_lost_per_10cm: float | None = None
+    avg_teu_per_container: float = 1.7
 
 
 def assemble_scenario(
@@ -352,6 +412,14 @@ def assemble_scenario(
         selection_priority=readings.selection_priority,
         fuel_type=readings.fuel_type,
         canal_state=readings.canal_state,
+        # Optional draft-based cargo-loss adjustment (Requirement 20.11). When
+        # the toggle is OFF, ``ControlReadings`` carries the no-loss defaults
+        # (draft_loss_enabled=False, containers_lost_per_10cm=None,
+        # avg_teu_per_container=1.7), so the assembled Scenario is identical to
+        # v1 and existing behavior is preserved.
+        draft_loss_enabled=readings.draft_loss_enabled,
+        containers_lost_per_10cm=readings.containers_lost_per_10cm,
+        avg_teu_per_container=readings.avg_teu_per_container,
     )
     return scenario, []
 
@@ -459,6 +527,82 @@ def _available_fuel_types(load_result: LoadResult) -> tuple[str, ...]:
     """
     return tuple(
         factor.fuel_type for factor in load_result.required.emission_factors
+    )
+
+
+def render_draft_loss_controls(
+    load_result: LoadResult,
+) -> tuple[bool, float | None, float]:
+    """Render the optional draft-based cargo-loss controls (Requirement 20.11).
+
+    Renders a toggle defaulting to OFF. When OFF, returns the no-loss defaults
+    so the assembled :class:`~canalcast.models.Scenario` is identical to v1:
+    ``(False, None, 1.7)``. When ON, exposes:
+
+    * a slider "Containers lost per 10 cm of draft cut" seeded from the loaded
+      ``containers_lost_per_10cm_draft_cut`` estimate (via
+      :func:`containers_lost_seed`), and
+    * an "Average TEU per lost container" number input (default ``1.7``),
+
+    along with a short caption disclosing that the adjustment rests on an
+    analyst-estimate and an assumption so the provenance is visible up front.
+
+    All Streamlit widget calls live inside this function, so importing the
+    module runs no Streamlit code.
+
+    Args:
+        load_result: The loaded required/optional data (source of the seed).
+
+    Returns:
+        A ``(draft_loss_enabled, containers_lost_per_10cm, avg_teu_per_container)``
+        tuple ready to place on a :class:`ControlReadings`. When the toggle is
+        off, ``(False, None, 1.7)`` so v1 behavior is preserved exactly.
+    """
+    enabled = st.toggle(
+        "Model draft-based cargo loss (v2)",
+        value=False,
+        help=(
+            "Optional, off by default. When on, a tighter Panama draft reduces "
+            "loaded TEU and raises the per-TEU figures for the Panama option."
+        ),
+    )
+
+    if not enabled:
+        # OFF: no-loss defaults matching the Scenario model so nothing changes
+        # for existing users (Requirement 20.11).
+        return False, None, AVG_TEU_PER_CONTAINER_DEFAULT
+
+    seed = containers_lost_seed(load_result)
+    containers_lost_per_10cm = st.slider(
+        "Containers lost per 10 cm of draft cut",
+        min_value=CONTAINERS_LOST_PER_10CM_MIN,
+        max_value=CONTAINERS_LOST_PER_10CM_MAX,
+        value=float(seed),
+        step=CONTAINERS_LOST_PER_10CM_STEP,
+        help=(
+            "Seeded from the loaded analyst estimate. Number of containers lost "
+            "per 10 cm of draft shortfall on the Panama route."
+        ),
+    )
+    avg_teu_per_container = st.number_input(
+        "Average TEU per lost container",
+        min_value=AVG_TEU_PER_CONTAINER_MIN,
+        value=AVG_TEU_PER_CONTAINER_DEFAULT,
+        step=AVG_TEU_PER_CONTAINER_STEP,
+        help="Assumption factor converting containers lost into TEU lost.",
+    )
+    st.caption(
+        "This adjustment rests on an analyst-estimate containers-lost figure and "
+        "an assumption average-TEU-per-container factor; it affects only loaded "
+        "TEU and the per-TEU figures for the Panama option."
+    )
+
+    return (
+        True,
+        None if containers_lost_per_10cm is None else float(containers_lost_per_10cm),
+        AVG_TEU_PER_CONTAINER_DEFAULT
+        if avg_teu_per_container is None
+        else float(avg_teu_per_container),
     )
 
 
@@ -606,6 +750,14 @@ def render_scenario_controls(
             "draft and booking-slot inputs."
         )
 
+    # Optional draft-based cargo-loss controls (Requirement 20.11). When the
+    # toggle is off these are the no-loss defaults, so the Scenario matches v1.
+    (
+        draft_loss_enabled,
+        containers_lost_per_10cm,
+        avg_teu_per_container,
+    ) = render_draft_loss_controls(load_result)
+
     return ControlReadings(
         od_pair=selected_pair,
         canal_state=canal_state,
@@ -624,6 +776,9 @@ def render_scenario_controls(
         fuel_type=fuel_type,
         missing=tuple(missing),
         out_of_range=tuple(out_of_range),
+        draft_loss_enabled=draft_loss_enabled,
+        containers_lost_per_10cm=containers_lost_per_10cm,
+        avg_teu_per_container=avg_teu_per_container,
     )
 
 

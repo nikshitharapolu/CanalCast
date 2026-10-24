@@ -21,6 +21,7 @@ from typing import Union
 
 from .models import (
     ContainerUnit,  # noqa: F401  (domain type referenced in docs / signatures)
+    DraftLoss,
     EmissionFactor,
     ProvenancedValue,
     ResultOrUnavailable,
@@ -508,3 +509,100 @@ def teu_for_container(container_type: str) -> ResultOrUnavailable[int]:
         reason=f"unsupported container type '{container_type}'",
         invalid_inputs=("container_type",),
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 14.2 -- optional draft-based cargo-loss modeling (Requirements 20.1-20.7, 20.10)
+# ---------------------------------------------------------------------------
+
+
+def draft_cargo_loss(
+    option: str,
+    canal_state_max_draft_ft: float | None,
+    reference_draft_ft: float | None,
+    containers_lost_per_10cm: float | None,
+    avg_teu_per_container: float | None,
+    *,
+    enabled: bool,
+) -> DraftLoss | Unavailable:
+    """Draft-based cargo-loss figures for one routing option (Requirement 20).
+
+    This version-2 adjustment is DISABLED by default and, when off, preserves
+    exact v1 behavior: draft remains pure context and never reduces cargo
+    (Requirement 20.1). It is a Panama-only effect; the Suez option is never
+    draft-reduced on the basis of the Panama Canal draft (Requirement 20.7).
+
+    Provenance: the inputs rest on an ANALYST-ESTIMATE containers-lost-per-10cm
+    figure (``containers_lost_per_10cm``) and an ASSUMPTION average
+    TEU-per-container factor (``avg_teu_per_container``); the caller records this
+    provenance on the labeled result fields (Requirements 20.5, 20.6, 20.9).
+
+    This function produces ONLY the loss figures. It never touches sailing fuel,
+    the cubic fuel curve, journey time, or the tank-to-wake CO2 factor; those
+    are unaffected by draft (Requirement 20.10). It never raises for expected
+    bad input: a missing/non-finite required input (while enabled on Panama)
+    yields an :class:`Unavailable` naming it, and a nonsense negative estimate or
+    factor yields an :class:`Unavailable` naming the invalid input -- never a
+    substituted or negative loss.
+
+    Rules (Requirements 20.1-20.7, 20.10):
+
+    * ``enabled is False`` or ``option != "panama"`` -> ``DraftLoss(0, 0, 0)``.
+    * ``shortfall_ft = reference_draft_ft - canal_state_max_draft_ft``; clamped to
+      ``DraftLoss(0, 0, 0)`` when ``<= 0`` (Requirements 20.2, 20.3).
+    * ``ten_cm_units = shortfall_ft * 30.48 / 10.0`` (1 ft = 30.48 cm).
+    * ``containers_lost = ten_cm_units * containers_lost_per_10cm`` (Req 20.4).
+    * ``teu_lost = containers_lost * avg_teu_per_container`` (Req 20.6).
+    """
+    # Off, or Suez: no draft-based loss at all (Requirements 20.1, 20.7).
+    if not enabled or option != "panama":
+        return DraftLoss(0.0, 0.0, 0.0)
+
+    # Panama with draft loss enabled: every figure rests on these inputs.
+    required = (
+        ("reference_draft_ft", reference_draft_ft),
+        ("canal_state_max_draft_ft", canal_state_max_draft_ft),
+        ("containers_lost_per_10cm", containers_lost_per_10cm),
+        ("avg_teu_per_container", avg_teu_per_container),
+    )
+    missing = tuple(
+        name for name, value in required if value is None or not _is_finite_number(value)
+    )
+    if missing:
+        return Unavailable(
+            reason=(
+                "draft-based cargo loss requires reference_draft_ft, "
+                "canal_state_max_draft_ft, containers_lost_per_10cm, and "
+                "avg_teu_per_container; some are unresolved inputs"
+            ),
+            missing_inputs=missing,
+        )
+
+    # Guard against nonsense sliders: a negative estimate or factor is invalid.
+    invalid = tuple(
+        name
+        for name, value in (
+            ("containers_lost_per_10cm", containers_lost_per_10cm),
+            ("avg_teu_per_container", avg_teu_per_container),
+        )
+        if float(value) < 0  # type: ignore[arg-type]
+    )
+    if invalid:
+        return Unavailable(
+            reason=(
+                "draft-based cargo loss requires a non-negative "
+                "containers_lost_per_10cm estimate and avg_teu_per_container "
+                "factor; some are invalid"
+            ),
+            invalid_inputs=invalid,
+        )
+
+    shortfall_ft = float(reference_draft_ft) - float(canal_state_max_draft_ft)  # type: ignore[arg-type]
+    if shortfall_ft <= 0:
+        # Draft meets or exceeds reference: no loss (Requirement 20.3).
+        return DraftLoss(0.0, 0.0, 0.0)
+
+    ten_cm_units = shortfall_ft * 30.48 / 10.0  # 1 ft = 30.48 cm
+    containers_lost = ten_cm_units * float(containers_lost_per_10cm)  # type: ignore[arg-type]
+    teu_lost = containers_lost * float(avg_teu_per_container)  # type: ignore[arg-type]
+    return DraftLoss(shortfall_ft, containers_lost, teu_lost)

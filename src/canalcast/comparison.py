@@ -31,6 +31,7 @@ from typing import Mapping
 from .calculations import (
     canal_fuel_t,
     co2_tank_to_wake_t,
+    draft_cargo_loss,
     fuel_cost_per_teu_usd,
     fuel_rate_t_per_day,
     journey_time_hours,
@@ -44,11 +45,13 @@ from .calculations import (
 from .models import (
     CanalState,
     Constants,
+    DraftLoss,
     EmissionFactor,
     ODPair,
     ProvenancedValue,
     RouteOption,
     Scenario,
+    Status,
     Unavailable,
 )
 from .results import (
@@ -63,6 +66,17 @@ from .results import (
 # (Requirement 10.4).
 DRAFT_NOT_MODELED_DISCLOSURE = (
     "Draft cargo-capacity effects are not modeled in version 1."
+)
+
+# Fixed disclosure recorded whenever the optional draft-based cargo-loss
+# adjustment is enabled: the adjustment rests on an ANALYST-ESTIMATE
+# containers-lost figure and an ASSUMPTION average-TEU-per-container factor
+# (Requirement 20.9).
+DRAFT_LOSS_DISCLOSURE = (
+    "The draft-based cargo-loss adjustment rests on an analyst-estimate "
+    "containers-lost-per-10cm figure and an assumption average-TEU-per-container "
+    "factor; the reduced loaded TEU and the per-TEU figures derived from it are "
+    "estimates, not observed values."
 )
 
 # Cost/emission items excluded from every option result (Requirement 8.6).
@@ -222,9 +236,68 @@ def compute_option(
         fuel_basis_note = "no resolvable fuel figure"
 
     # --- Loaded TEU (independent) --------------------------------------
-    loaded = loaded_teu(
+    base_loaded = loaded_teu(
         _pv_float(constants.ship_capacity_teu), scenario.load_factor
     )
+
+    # --- Optional draft-based cargo loss (Requirement 20) --------------
+    # Default-off path (draft_loss_enabled is False) leaves loaded TEU at the
+    # base value and all draft-loss fields at their no-loss defaults, so v1
+    # behavior is byte-identical (Requirements 20.1, 20.9).
+    loaded = base_loaded
+    draft_shortfall_ft: float | None = None
+    draft_containers_lost: float | None = None
+    draft_teu_lost: float | None = None
+    draft_loss_disclosure: str | None = None
+
+    if scenario.draft_loss_enabled:
+        # Containers-lost estimate: explicit scenario override, else the loaded
+        # constant (Requirement 20.5).
+        if scenario.containers_lost_per_10cm is not None:
+            estimate = scenario.containers_lost_per_10cm
+        else:
+            estimate = _pv_float(
+                constants.context.get("containers_lost_per_10cm_draft_cut")
+            )
+        reference_draft = _pv_float(constants.reference_draft_ft)
+        canal_state_max_draft = _pv_float(scenario.canal_state.max_draft_ft)
+
+        draft_loss = draft_cargo_loss(
+            route_opt.option,
+            canal_state_max_draft,
+            reference_draft,
+            estimate,
+            scenario.avg_teu_per_container,
+            enabled=scenario.draft_loss_enabled,
+        )
+
+        draft_loss_disclosure = DRAFT_LOSS_DISCLOSURE
+        if isinstance(draft_loss, DraftLoss):
+            draft_shortfall_ft = draft_loss.shortfall_ft
+            draft_containers_lost = draft_loss.containers_lost
+            draft_teu_lost = draft_loss.teu_lost
+            # Only adjust a resolved base loaded TEU; never invent one when the
+            # base is Unavailable (Requirement 20.8).
+            if not isinstance(base_loaded, Unavailable):
+                # Clamp at zero; a draft adjustment never produces negative TEU
+                # (Requirement 20.8).
+                loaded = max(0.0, float(base_loaded) - draft_loss.teu_lost)
+        else:
+            # The loss could not be computed (a required input was missing or
+            # invalid). Keep the base loaded TEU intact and disclose which
+            # inputs were missing, rather than crashing or inventing a loss
+            # (independent evaluation, Req 3.4).
+            missing_bits = ", ".join(
+                draft_loss.missing_inputs + draft_loss.invalid_inputs
+            )
+            draft_loss_disclosure = (
+                DRAFT_LOSS_DISCLOSURE
+                + " The adjustment could not be computed because of unresolved "
+                + f"inputs ({missing_bits})."
+                if missing_bits
+                else DRAFT_LOSS_DISCLOSURE
+                + " The adjustment could not be computed because of unresolved inputs."
+            )
 
     # --- Cost and cost per TEU (independent) ---------------------------
     voyage_cost = voyage_fuel_cost_usd(
@@ -273,6 +346,27 @@ def compute_option(
     if constants.canal_fuel_t_per_day is not None:
         input_provenance["canal_fuel_t_per_day"] = constants.canal_fuel_t_per_day
 
+    # Draft-loss input provenance (best-effort; never crash if a piece is
+    # absent) (Requirements 20.5, 20.6, 20.9).
+    if scenario.draft_loss_enabled:
+        input_provenance["reference_draft_ft"] = constants.reference_draft_ft
+        estimate_pv = constants.context.get("containers_lost_per_10cm_draft_cut")
+        if scenario.containers_lost_per_10cm is not None:
+            input_provenance["containers_lost_per_10cm"] = ProvenancedValue(
+                value=float(scenario.containers_lost_per_10cm),
+                unit="containers per 10 cm of draft shortfall",
+                rationale="explicit scenario override of the analyst estimate",
+                status=Status.ASSUMPTION,
+            )
+        elif estimate_pv is not None:
+            input_provenance["containers_lost_per_10cm"] = estimate_pv
+        input_provenance["avg_teu_per_container"] = ProvenancedValue(
+            value=float(scenario.avg_teu_per_container),
+            unit="TEU per container",
+            rationale="assumed average TEU per lost container",
+            status=Status.ASSUMPTION,
+        )
+
     # Record which fuel basis fed cost/CO2 in the units map notes.
     units: dict[str, str] = dict(_UNITS)
     units["fuel_for_cost_basis"] = fuel_basis_note
@@ -295,6 +389,11 @@ def compute_option(
         draft_not_modeled_disclosure=DRAFT_NOT_MODELED_DISCLOSURE,
         exclusions=EXCLUSIONS,
         input_provenance=input_provenance,
+        draft_loss_enabled=scenario.draft_loss_enabled,
+        draft_shortfall_ft=draft_shortfall_ft,
+        containers_lost=draft_containers_lost,
+        teu_lost=draft_teu_lost,
+        draft_loss_disclosure=draft_loss_disclosure,
     )
 
 

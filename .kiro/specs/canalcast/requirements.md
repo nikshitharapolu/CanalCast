@@ -294,3 +294,23 @@ This document uses the following status vocabulary for model inputs, drawn direc
 6. THE CanalCast project SHALL provide instructions that enable a developer to deploy CanalCast with Streamlit, including the application entry point and the deployment steps.
 7. THE CanalCast project SHALL pin each dependency to an exact version in a requirements file, with no open or unbounded version range.
 8. IF a dependency in the requirements file is specified without an exact version, THEN THE CanalCast project SHALL treat the requirements file as invalid and report the unpinned dependency.
+
+### Requirement 20: Optional draft-based cargo-loss modeling (version 2)
+
+**User Story:** As a user, I want an optional, clearly-disclosed draft-based cargo-loss adjustment, so that a tighter Panama Canal draft visibly reduces loaded TEU and therefore changes fuel cost per TEU and per-TEU figures when I choose to enable it.
+
+This requirement defines a version 2 feature that is DISABLED by default. When the draft-loss toggle is off, Requirement 10 governs unchanged (draft is context only). When the toggle is on, this requirement supersedes Requirement 10.2 and 10.3 for the affected option.
+
+#### Acceptance Criteria
+
+1. THE Calculation_Core SHALL accept an explicit scenario flag Draft_Loss_Enabled that defaults to false, and WHILE Draft_Loss_Enabled is false THE Calculation_Core SHALL behave exactly as specified in Requirement 10 (draft is context only).
+2. WHILE Draft_Loss_Enabled is true AND the Route_Option is the Panama Route_Option, THE Calculation_Core SHALL compute a Draft_Shortfall_Ft as the reference draft in feet minus the Canal_State maximum draft in feet, using reference_draft_ft from the loaded constants.
+3. IF the Draft_Shortfall_Ft is less than or equal to zero feet, THEN THE Calculation_Core SHALL set Containers_Lost to zero and SHALL NOT increase Loaded_TEU above the no-loss value.
+4. WHILE Draft_Loss_Enabled is true AND Draft_Shortfall_Ft is greater than zero, THE Calculation_Core SHALL convert the shortfall to 10-centimetre units using 1 foot equals 30.48 centimetres, and SHALL compute Containers_Lost as the shortfall in 10-centimetre units multiplied by the containers-lost-per-10cm estimate.
+5. THE Calculation_Core SHALL take the containers-lost-per-10cm estimate from the loaded containers_lost_per_10cm_draft_cut constant by default, and SHALL accept an explicit scenario override of that estimate when provided.
+6. THE Calculation_Core SHALL convert Containers_Lost to TEU_Lost using an assumed average TEU-per-container factor Avg_Teu_Per_Container, carried as a Model_Input with status assumption.
+7. WHILE Draft_Loss_Enabled is true, THE Calculation_Core SHALL compute Loaded_TEU for the Panama Route_Option as ship capacity in TEU multiplied by load factor, minus TEU_Lost, and SHALL NOT reduce the Suez Route_Option Loaded_TEU on the basis of the Panama Canal draft.
+8. IF the draft-adjusted Loaded_TEU is less than or equal to zero, THEN THE Calculation_Core SHALL clamp Loaded_TEU to zero and return an Infeasible_Result for that Route_Option as specified in Requirement 11.9, without producing a negative Loaded_TEU.
+9. WHILE Draft_Loss_Enabled is true, THE Calculation_Core SHALL record in the result that the cargo-loss adjustment rests on an analyst-estimate containers-lost figure and an assumption average TEU-per-container factor, and SHALL report Draft_Shortfall_Ft, Containers_Lost, and TEU_Lost as labeled result fields with their provenance.
+10. THE Calculation_Core SHALL NOT alter Sailing_Fuel, the cubic fuel curve, Journey_Time, or the tank-to-wake carbon-dioxide factor on the basis of draft; the draft adjustment SHALL affect only Loaded_TEU and the per-TEU figures derived from it.
+11. THE Streamlit_Interface SHALL provide a Draft_Loss_Enabled toggle defaulting to off, and WHILE the toggle is on THE Streamlit_Interface SHALL provide a containers-lost-per-10cm slider seeded from the loaded estimate and SHALL display Draft_Shortfall_Ft, Containers_Lost, TEU_Lost, and the analyst-estimate and assumption disclosures alongside the affected results.

@@ -324,6 +324,15 @@ class Scenario:
         fuel_type: Selects the matching :class:`EmissionFactor`.
         canal_state: The canal operating state; draft shown as CONTEXT
             (Requirement 10).
+        draft_loss_enabled: Whether the draft-loss adjustment is active. Defaults
+            to ``False``, which preserves exact v1 behavior (draft remains pure
+            context and never reduces TEU, cost, fuel, or CO2) (Requirement 20.1).
+        containers_lost_per_10cm: Containers lost per 10 cm of draft shortfall,
+            or ``None`` to use the value loaded from constants. ``None`` keeps the
+            loaded constant as the single source of truth (Requirement 20.5).
+        avg_teu_per_container: Average TEU per lost container, an assumption
+            factor used to convert containers lost into TEU lost
+            (Requirement 20.6).
     """
 
     od_pair_id: str
@@ -337,3 +346,28 @@ class Scenario:
     selection_priority: Literal["fastest", "lowest_cost_per_teu", "lowest_co2"]
     fuel_type: str
     canal_state: CanalState
+    draft_loss_enabled: bool = False
+    containers_lost_per_10cm: float | None = None
+    avg_teu_per_container: float = 1.7
+
+
+@dataclass(frozen=True)
+class DraftLoss:
+    """The draft-loss adjustment for one routing option (Requirement 20).
+
+    All three fields are ``0.0`` when draft loss is disabled
+    (:attr:`Scenario.draft_loss_enabled` is ``False``) or not applicable (no
+    draft shortfall).
+
+    Attributes:
+        shortfall_ft: The draft shortfall in feet, clamped to ``>= 0`` (zero when
+            the available draft meets or exceeds the required draft).
+        containers_lost: The estimated number of containers lost to the draft
+            shortfall.
+        teu_lost: The TEU lost, derived from :attr:`containers_lost` and the
+            average-TEU-per-container assumption.
+    """
+
+    shortfall_ft: float
+    containers_lost: float
+    teu_lost: float
