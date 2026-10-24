@@ -23,7 +23,7 @@ _OD = next(o for o in _REQ.od_pairs if o.route_id == "shanghai_boston")
 def _scenario(enabled: bool) -> Scenario:
     return Scenario(
         od_pair_id=_OD.route_id, speed_kn=18.0, load_factor=0.85,
-        bunker_price_usd_per_t=876.5, canal_duration_h=12.0,
+        bunker_price_usd_per_t=876.5, canal_duration_h=0.0,
         waiting_duration_h=0.0, deadline_h=None, suez_available=True,
         selection_priority="fastest", fuel_type="HFO",
         canal_state=_STATES["current_oct2026"], draft_loss_enabled=enabled,

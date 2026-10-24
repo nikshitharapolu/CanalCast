@@ -578,6 +578,72 @@
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792867593909
       }
+    ],
+    "15.1 Correct voyage-fuel dependency semantics in calculations, comparison, results, and UI": [
+      {
+        "executionId": "92676932-5c2c-4982-99b1-a353be5108f5",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792874004641
+      },
+      {
+        "executionId": "b23da476-1669-4695-94d9-8734ac61a915",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792874720390
+      }
+    ],
+    "15.5 Preserve source trust status during loading": [
+      {
+        "executionId": "92676932-5c2c-4982-99b1-a353be5108f5",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792874005637
+      },
+      {
+        "executionId": "b23da476-1669-4695-94d9-8734ac61a915",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792874585129
+      }
+    ],
+    "15.2 Correct deadline and eligibility states": [
+      {
+        "executionId": "b23da476-1669-4695-94d9-8734ac61a915",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792874899007
+      }
+    ],
+    "15.7 Apply waiting time to the Panama route only; mark Suez waiting as not modeled": [
+      {
+        "executionId": "b23da476-1669-4695-94d9-8734ac61a915",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792875079502
+      }
+    ],
+    "15.3 Restore the original MVP draft boundary": [
+      {
+        "executionId": "b23da476-1669-4695-94d9-8734ac61a915",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792875133825
+      }
+    ],
+    "15.4 Correct selection disclosure and provenance": [
+      {
+        "executionId": "b23da476-1669-4695-94d9-8734ac61a915",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792875214389
+      }
+    ],
+    "15.6 Align UI/docs and add rendered regression coverage": [
+      {
+        "executionId": "b23da476-1669-4695-94d9-8734ac61a915",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792875283140
+      }
+    ],
+    "15. Stabilize the original MVP after implementation review": [
+      {
+        "executionId": "b23da476-1669-4695-94d9-8734ac61a915",
+        "chatSessionId": "sess_6d2e4ff9-524e-4890-94cf-145752755084",
+        "timestamp": 1792875283208
+      }
     ]
   }
 }

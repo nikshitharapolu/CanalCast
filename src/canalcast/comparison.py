@@ -26,6 +26,7 @@ an Infeasible_Result with an undefined fuel cost per TEU (Requirement 11.9).
 
 from __future__ import annotations
 
+import math
 from typing import Mapping
 
 from .calculations import (
@@ -43,6 +44,7 @@ from .calculations import (
     waiting_fuel_t,
 )
 from .models import (
+    NotModeled,
     CanalState,
     Constants,
     DraftLoss,
@@ -55,6 +57,7 @@ from .models import (
     Unavailable,
 )
 from .results import (
+    SAILING_ONLY_LABEL,
     ComparisonResult,
     FuelBreakdown,
     JourneyTimeBreakdown,
@@ -117,6 +120,15 @@ DRAFT_NOT_APPLIED_SUEZ = (
     "draft-based loss is modeled for this option."
 )
 
+#: Suez waiting is outside the v1 model (Requirements 6.5, 6.12, 6.13, 7.7).
+SUEZ_WAITING_NOT_MODELED = NotModeled(
+    reason="Suez waiting time is not modeled; the waiting input applies only to Panama"
+)
+SUEZ_WAITING_DISCLOSURE = (
+    "Suez waiting time is not modeled: the waiting input applies only to the "
+    "Panama route, so the Suez journey time and fuel exclude any queueing."
+)
+SUEZ_WAITING_EXCLUSION = "Suez waiting time (not modeled)"
 # Cost/emission items excluded from every option result (Requirement 8.6).
 EXCLUSIONS: tuple[str, ...] = (
     "tolls",
@@ -160,6 +172,8 @@ _UNITS: Mapping[str, str] = {
     "fuel_cost_per_teu_usd": "USD/TEU",
     "co2_tank_to_wake_t": "t CO2",
     "loaded_teu": "TEU",
+    "sailing_only_fuel_cost_usd": "USD",
+    "sailing_only_co2_t": "t CO2",
 }
 
 
@@ -179,6 +193,61 @@ def _pv_float(pv: ProvenancedValue | None) -> float | None:
         return None
 
 
+def _merge_inputs(
+    base: Unavailable, *extras: object
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return ``base`` missing/invalid input names plus any from ``extras``.
+
+    Only input NAMES are merged; no numeric value is ever carried over.
+    """
+    missing = list(base.missing_inputs)
+    invalid = list(base.invalid_inputs)
+    for extra in extras:
+        if isinstance(extra, Unavailable):
+            missing += [m for m in extra.missing_inputs if m not in missing]
+            invalid += [i for i in extra.invalid_inputs if i not in invalid]
+    return tuple(missing), tuple(invalid)
+
+
+def _total_fuel_gap(total_fuel: Unavailable, fuel: FuelBreakdown) -> Unavailable:
+    """Explain why total voyage fuel is unresolved (Requirements 3.1, 7.5).
+
+    Names each unresolved fuel line item and the inputs behind it, so dependent
+    outputs can report exactly what is missing.
+    """
+    items = (
+        ("sailing fuel", fuel.sailing_fuel_t),
+        ("waiting fuel", fuel.waiting_fuel_t),
+        ("canal fuel", fuel.canal_fuel_t),
+    )
+    unresolved = [name for name, item in items if isinstance(item, Unavailable)]
+    missing, invalid = _merge_inputs(total_fuel, *(item for _, item in items))
+    detail = ", ".join(unresolved) if unresolved else "a fuel component"
+    return Unavailable(
+        reason=f"total voyage fuel is unresolved ({detail})",
+        missing_inputs=missing,
+        invalid_inputs=invalid,
+    )
+
+
+def _requires_total_fuel(
+    label: str, fuel_gap: Unavailable, *extras: object
+) -> Unavailable:
+    """Return ``Unavailable`` for an output that needs resolved total fuel.
+
+    Voyage fuel cost, fuel cost per loaded TEU, and tank-to-wake CO2 depend on
+    resolved total voyage fuel only (Requirements 8.1, 8.5, 9.1). Input names
+    from ``extras`` (for example a missing bunker price) are merged so every
+    missing input is reported (Requirement 3.1).
+    """
+    missing, invalid = _merge_inputs(fuel_gap, *extras)
+    return Unavailable(
+        reason=f"{label} requires resolved total voyage fuel; {fuel_gap.reason}",
+        missing_inputs=missing,
+        invalid_inputs=invalid,
+    )
+
+
 def compute_option(
     route_opt: RouteOption,
     scenario: Scenario,
@@ -191,14 +260,17 @@ def compute_option(
     calculation is recorded as an :class:`Unavailable` and never suppresses the
     others.
 
-    Fuel-for-cost basis: ``voyage_fuel_cost_usd`` and ``co2_tank_to_wake_t`` are
-    computed on the best-resolved fuel figure. When ``total_voyage_fuel_t`` is a
-    true total (all components resolved) it is used; otherwise the
-    sailing-only ``sailing_fuel_t`` is used as a partial estimate (per the
-    Task 4.2 design note), and when even sailing fuel is unavailable the cost and
-    CO2 are themselves ``Unavailable``. In the normal all-zero-duration scenario
-    (waiting = 0, canal = 0) the waiting and canal line items resolve to ``0.0``,
-    so the total equals the sailing fuel and the full total is used.
+    Voyage-fuel dependency: ``voyage_fuel_cost_usd``, ``fuel_cost_per_teu_usd``
+    and ``co2_tank_to_wake_t`` use RESOLVED ``total_voyage_fuel_t`` only
+    (Requirements 8.1, 8.3, 9.1). There is no fallback to sailing fuel: when any
+    fuel component is unresolved (e.g. a positive canal duration with no canal
+    fuel rate), those three outputs are ``Unavailable`` and name the unresolved
+    component(s) and inputs (Requirements 3.1-3.3, 7.5, 8.5). In that case, and
+    only when sailing fuel itself is resolved, the separately named
+    ``sailing_only_fuel_cost_usd`` / ``sailing_only_co2_t`` fields carry a
+    partial estimate labeled with :data:`~canalcast.results.SAILING_ONLY_LABEL`;
+    selection never reads them. A zero waiting or canal duration resolves its
+    line item to ``0.0`` even without a rate, so the total still resolves.
     """
     # --- Journey time (independent) ------------------------------------
     distance_value = (
@@ -217,12 +289,19 @@ def compute_option(
     # components. A missing (None) or negative value is shown as Unavailable so
     # the component is explicit, but the provided value is preferred.
     canal_component = _echo_duration(scenario.canal_duration_h, "canal_duration_h")
-    waiting_component = _echo_duration(
-        scenario.waiting_duration_h, "waiting_duration_h"
+    # Waiting applies only to Panama; Suez waiting is not modeled (Req 6.5-6.7).
+    is_panama = route_opt.option == "panama"
+    waiting_input: float | None | NotModeled = (
+        scenario.waiting_duration_h if is_panama else SUEZ_WAITING_NOT_MODELED
+    )
+    waiting_component = (
+        _echo_duration(scenario.waiting_duration_h, "waiting_duration_h")
+        if is_panama
+        else SUEZ_WAITING_NOT_MODELED
     )
 
     journey_time = journey_time_hours(
-        sailing_time, scenario.canal_duration_h, scenario.waiting_duration_h
+        sailing_time, scenario.canal_duration_h, waiting_input
     )
 
     journey = JourneyTimeBreakdown(
@@ -240,8 +319,10 @@ def compute_option(
         _pv_float(constants.speed_exponent),
     )
     sailing_fuel = sailing_fuel_t(fuel_rate, sailing_time)
-    waiting_fuel = waiting_fuel_t(
-        scenario.waiting_duration_h, constants.waiting_fuel_t_per_day
+    waiting_fuel = (
+        waiting_fuel_t(scenario.waiting_duration_h, constants.waiting_fuel_t_per_day)
+        if is_panama
+        else SUEZ_WAITING_NOT_MODELED
     )
     canal_fuel = canal_fuel_t(
         scenario.canal_duration_h, constants.canal_fuel_t_per_day
@@ -256,22 +337,14 @@ def compute_option(
         total_voyage_fuel_t=total_fuel,
     )
 
-    # Best-resolved fuel basis for cost and CO2: prefer the true total; fall
-    # back to the sailing-only partial estimate; else Unavailable.
-    if not isinstance(total_fuel, Unavailable):
-        fuel_for_cost_basis: float | Unavailable = total_fuel
-        fuel_basis_note = "total voyage fuel (all components resolved)"
-    elif not isinstance(sailing_fuel, Unavailable):
-        fuel_for_cost_basis = sailing_fuel
-        fuel_basis_note = (
-            "sailing-only partial estimate (waiting/canal fuel unresolved)"
-        )
-    else:
-        fuel_for_cost_basis = Unavailable(
-            reason="cost/CO2 basis requires voyage fuel, which is unavailable",
-            missing_inputs=("total_voyage_fuel_t", "sailing_fuel_t"),
-        )
-        fuel_basis_note = "no resolvable fuel figure"
+    # Why the total is unresolved (None when it resolved). Voyage cost, cost per
+    # TEU, and CO2 depend on the resolved total only; there is no sailing-fuel
+    # fallback (Requirements 3.1-3.3, 7.5, 8.1, 8.5, 9.1).
+    fuel_gap: Unavailable | None = (
+        _total_fuel_gap(total_fuel, fuel)
+        if isinstance(total_fuel, Unavailable)
+        else None
+    )
 
     # --- Loaded TEU (independent) --------------------------------------
     base_loaded = loaded_teu(
@@ -333,9 +406,14 @@ def compute_option(
                 loaded = max(0.0, float(base_loaded) - draft_loss.teu_lost)
         else:
             # The loss could not be computed (a required input was missing or
-            # invalid). Keep the base loaded TEU intact and disclose which
-            # inputs were missing, rather than crashing or inventing a loss
-            # (independent evaluation, Req 3.4).
+            # invalid). Fail closed: loaded TEU (and so cost per TEU) becomes
+            # Unavailable naming the inputs, never the unadjusted base payload
+            # (Task 15.3, Requirement 20.8).
+            loaded = Unavailable(
+                reason="draft-adjusted loaded TEU requires the draft-loss inputs",
+                missing_inputs=draft_loss.missing_inputs,
+                invalid_inputs=draft_loss.invalid_inputs,
+            )
             missing_bits = ", ".join(
                 draft_loss.missing_inputs + draft_loss.invalid_inputs
             )
@@ -348,21 +426,57 @@ def compute_option(
                 + " The adjustment could not be computed because of unresolved inputs."
             )
 
-    # --- Cost and cost per TEU (independent) ---------------------------
-    voyage_cost = voyage_fuel_cost_usd(
-        fuel_for_cost_basis, scenario.bunker_price_usd_per_t
-    )
-
-    # --- CO2 (independent) ---------------------------------------------
-    co2 = co2_tank_to_wake_t(fuel_for_cost_basis, emission_factor, scenario.fuel_type)
+    # --- Voyage fuel cost and CO2 (resolved total voyage fuel only) ----
+    sailing_only_cost: float | Unavailable | None = None
+    sailing_only_co2: float | Unavailable | None = None
+    sailing_only_label: str | None = None
+    if fuel_gap is None:
+        voyage_cost = voyage_fuel_cost_usd(
+            total_fuel, scenario.bunker_price_usd_per_t
+        )
+        co2 = co2_tank_to_wake_t(total_fuel, emission_factor, scenario.fuel_type)
+    else:
+        # Separately named, labeled sailing-only estimates (never voyage totals,
+        # never read by selection), only when sailing fuel itself resolved.
+        if not isinstance(sailing_fuel, Unavailable):
+            sailing_only_cost = voyage_fuel_cost_usd(
+                sailing_fuel, scenario.bunker_price_usd_per_t
+            )
+            sailing_only_co2 = co2_tank_to_wake_t(
+                sailing_fuel, emission_factor, scenario.fuel_type
+            )
+            sailing_only_label = SAILING_ONLY_LABEL
+        # Headline outputs stay Unavailable. Only the input NAMES of an
+        # unavailable sailing-only result (e.g. a missing bunker price) are
+        # merged, so every missing input is reported (Req 3.1); no number is
+        # ever carried over.
+        voyage_cost = _requires_total_fuel(
+            "voyage fuel cost", fuel_gap, sailing_only_cost
+        )
+        co2 = _requires_total_fuel("tank-to-wake CO2", fuel_gap, sailing_only_co2)
 
     # --- Feasibility / deadline status ---------------------------------
-    if not isinstance(journey_time, Unavailable) and scenario.deadline_h is not None:
-        feasible: bool | None = journey_time <= scenario.deadline_h
+    # "undetermined" is never a miss; it names its cause (Task 15.2).
+    deadline_h = scenario.deadline_h
+    deadline_ok = (
+        deadline_h is not None and math.isfinite(deadline_h) and deadline_h > 0
+    )
+    deadline_undetermined_inputs: tuple[str, ...] = ()
+    if not isinstance(journey_time, Unavailable) and deadline_ok:
+        feasible: bool | None = journey_time <= deadline_h
         deadline_status = "meets deadline" if feasible else "misses deadline"
     else:
         feasible = None
         deadline_status = "undetermined"
+        causes: list[str] = []
+        if isinstance(journey_time, Unavailable):
+            causes += list(journey_time.missing_inputs)
+            causes += list(journey_time.invalid_inputs)
+            if not causes:
+                causes.append("journey_time_h")
+        if not deadline_ok:
+            causes.append("deadline_h")
+        deadline_undetermined_inputs = tuple(dict.fromkeys(causes))
 
     # --- Infeasible_Result when loaded TEU is zero (Requirement 11.9) ---
     infeasible = (not isinstance(loaded, Unavailable)) and loaded == 0
@@ -375,6 +489,11 @@ def compute_option(
         # Fuel cost per TEU stays Unavailable when infeasible.
         cost_per_teu: float | Unavailable = Unavailable(
             reason="loaded TEU is zero", invalid_inputs=("loaded_teu",)
+        )
+    elif fuel_gap is not None:
+        infeasible_reason = None
+        cost_per_teu = _requires_total_fuel(
+            "fuel cost per loaded TEU", fuel_gap, sailing_only_cost, loaded
         )
     else:
         infeasible_reason = None
@@ -394,6 +513,30 @@ def compute_option(
         input_provenance["waiting_fuel_t_per_day"] = constants.waiting_fuel_t_per_day
     if constants.canal_fuel_t_per_day is not None:
         input_provenance["canal_fuel_t_per_day"] = constants.canal_fuel_t_per_day
+    input_provenance["bunker_price_reference"] = constants.bunker_price_usd_per_t
+
+    # Every result-driving scenario input, plus the emission factor (Task 15.4).
+    scenario_inputs: list[tuple[str, float | str | None, str]] = [
+        ("speed_kn", scenario.speed_kn, "knots"),
+        ("load_factor", scenario.load_factor, "fraction"),
+        ("bunker_price_usd_per_t", scenario.bunker_price_usd_per_t, "USD/t"),
+        ("canal_duration_h", scenario.canal_duration_h, "hours"),
+        ("deadline_h", scenario.deadline_h, "hours"),
+        ("suez_available", "available" if scenario.suez_available else "unavailable", "-"),
+        ("fuel_type", scenario.fuel_type, "-"),
+    ]
+    if is_panama:
+        scenario_inputs.append(("waiting_duration_h", scenario.waiting_duration_h, "hours"))
+    for name, value, unit in scenario_inputs:
+        if value is not None:
+            input_provenance[name] = ProvenancedValue(
+                value=value,
+                unit=unit,
+                rationale="scenario input chosen in the controls",
+                status=Status.ASSUMPTION,
+            )
+    if emission_factor is not None:
+        input_provenance["co2_t_per_fuel_t"] = emission_factor.co2_t_per_fuel_t
 
     # Draft-loss input provenance (best-effort; never crash if a piece is
     # absent) (Requirements 20.5, 20.6, 20.9).
@@ -416,9 +559,7 @@ def compute_option(
             status=Status.ASSUMPTION,
         )
 
-    # Record which fuel basis fed cost/CO2 in the units map notes.
     units: dict[str, str] = dict(_UNITS)
-    units["fuel_for_cost_basis"] = fuel_basis_note
 
     modeled_here = draft_loss_computed and route_opt.option == "panama"
     without_draft_exclusion = tuple(x for x in EXCLUSIONS if x != "draft cargo-loss")
@@ -433,6 +574,8 @@ def compute_option(
     else:
         draft_note = DRAFT_NOT_MODELED_DISCLOSURE
         option_exclusions = EXCLUSIONS
+    if not is_panama:
+        option_exclusions = option_exclusions + (SUEZ_WAITING_EXCLUSION,)
 
     return OptionResult(
         option=route_opt.option,
@@ -457,6 +600,11 @@ def compute_option(
         containers_lost=draft_containers_lost,
         teu_lost=draft_teu_lost,
         draft_loss_disclosure=draft_loss_disclosure,
+        sailing_only_fuel_cost_usd=sailing_only_cost,
+        sailing_only_co2_t=sailing_only_co2,
+        sailing_only_label=sailing_only_label,
+        deadline_undetermined_inputs=deadline_undetermined_inputs,
+        waiting_not_modeled_disclosure=None if is_panama else SUEZ_WAITING_DISCLOSURE,
     )
 
 
@@ -624,6 +772,7 @@ def compare_od_pair(
         results=results,
         candidate_names=candidate_names,
         feasible_candidates=feasible_candidates,
+        exclusion_reasons=exclusion_reasons,
     )
 
     return ComparisonResult(
@@ -667,9 +816,10 @@ def _rejected_for_distance(
     selection = Selection(
         selected_option=None,
         priority=scenario.selection_priority,
-        no_feasible_option=True,
+        no_feasible_option=False,
         closest_option=None,
         tie_resolution=None,
+        outcome="comparison_rejected",
         message=(
             "No selection was made because the comparison was rejected: "
             f"a valid positive distance is missing for {which}."
@@ -706,129 +856,155 @@ def _closest_by_journey(
     return timed[0][0]
 
 
+def _label(name: str) -> str:
+    """Return the display label for an option name."""
+    return name.capitalize()
+
+
+def _describe_unresolved(unresolved: Mapping[str, tuple[str, ...]]) -> str:
+    """Describe each option and the inputs that left it unresolved."""
+    return "; ".join(
+        f"{_label(name)} (needs {', '.join(inputs) or 'an unresolved input'})"
+        for name, inputs in unresolved.items()
+    )
+
+
+def _pick_by_metric(
+    priority: str, results: Mapping[str, OptionResult], scored: Mapping[str, float]
+) -> tuple[str, str | None]:
+    """Minimize the metric with tie handling: metric, journey time, Panama.
+
+    Returns the selected option and the tie step that resolved it, if any
+    (Requirements 11.4, 11.6, 11.7, 11.8).
+    """
+    tolerance = _METRIC_TOLERANCE.get(priority, 0.001)
+    ordered = sorted(
+        scored.items(), key=lambda item: (item[1], 0 if item[0] == "panama" else 1)
+    )
+    best_name, best_metric = ordered[0]
+    tied = [name for name, value in ordered if abs(value - best_metric) <= tolerance]
+    if len(tied) < 2:
+        return best_name, None
+    journey_times = {name: _journey_float(results[name]) for name in tied}
+    resolvable = {name: jt for name, jt in journey_times.items() if jt is not None}
+    if resolvable:
+        min_jt = min(resolvable.values())
+        leaders = [
+            name for name, jt in resolvable.items()
+            if abs(jt - min_jt) <= TIE_TOLERANCE_HOURS
+        ]
+    else:
+        leaders = list(tied)
+    if len(leaders) == 1:
+        return leaders[0], (
+            f"metric tie within {tolerance} resolved by lower journey time"
+        )
+    selected = "panama" if "panama" in leaders else sorted(leaders)[0]
+    return selected, (
+        "metric and journey time tied within tolerance; resolved by the "
+        "Panama tie-break convention (a disclosed deterministic rule, not "
+        "evidence Panama is superior)"
+    )
+
+
 def _build_selection(
     priority: str,
     results: Mapping[str, OptionResult],
     candidate_names: list[str],
     feasible_candidates: list[str],
+    exclusion_reasons: Mapping[str, str] | None = None,
 ) -> Selection:
-    """Build the :class:`Selection` outcome for the comparison.
+    """Resolve exactly one selection outcome (design "Deadline status and selection outcomes").
 
-    Applies the deadline-miss rule (Requirement 11.5) when no non-excluded option
-    is feasible, otherwise minimizes the chosen metric with deterministic tie
-    handling (Requirements 11.4, 11.6, 11.7, 11.8).
+    ``candidate_names`` are the available options after exclusions. Only
+    ``all_available_miss`` may say that no route meets the deadline, and its
+    wording is scoped to the available routes (Requirements 3.1, 11.3-11.5).
     """
-    # --- Deadline miss: no non-excluded Feasible_Option (Req 11.5) -----
-    if not feasible_candidates:
-        closest = _closest_by_journey(results, candidate_names)
-        if closest is None:
-            message = (
-                "No option meets the deadline, and no journey time could be "
-                "resolved for the available options, so no closest option could "
-                "be identified."
-            )
-        else:
-            message = (
-                "Neither route meets the deadline, so no selection was made. "
-                f"The closest option by journey time is {closest}."
-            )
-        return Selection(
-            selected_option=None,
-            priority=priority,
-            no_feasible_option=True,
-            closest_option=closest,
-            tie_resolution=None,
-            message=message,
-        )
+    reasons = dict(exclusion_reasons or {})
+    common = {"priority": priority, "tie_resolution": None}
 
-    # --- Selection candidates: feasible AND a resolved metric ----------
-    scored: list[tuple[str, float]] = []
-    for name in feasible_candidates:
-        metric = _metric_value(results[name], priority)
-        if not isinstance(metric, Unavailable):
-            scored.append((name, float(metric)))
-
-    if not scored:
-        # Feasible options exist, but none has a resolved metric on this
-        # priority, so no metric-based selection can be made.
-        closest = _closest_by_journey(results, candidate_names)
+    if not candidate_names:
+        detail = "; ".join(f"{_label(n)}: {r}" for n, r in reasons.items())
         return Selection(
-            selected_option=None,
-            priority=priority,
-            no_feasible_option=False,
-            closest_option=closest,
-            tie_resolution=None,
+            selected_option=None, no_feasible_option=False, closest_option=None,
             message=(
-                "A feasible option exists, but the selected priority metric "
-                f"({priority}) is unavailable for every feasible option, so no "
-                "selection could be made."
+                "No route is available to compare, so no selection was made"
+                + (f" ({detail})." if detail else ".")
             ),
+            outcome="no_available_option", **common,
         )
 
-    tolerance = _METRIC_TOLERANCE.get(priority, 0.001)
+    undetermined = {
+        name: tuple(results[name].deadline_undetermined_inputs)
+        for name in candidate_names
+        if results[name].feasible is None
+    }
 
-    # Best by metric (minimize). Panama-first ordering of scored makes the
-    # initial pick deterministic before tie resolution is applied.
-    scored.sort(
-        key=lambda item: (item[1], 0 if item[0] == "panama" else 1)
-    )
-    best_name, best_metric = scored[0]
-
-    # Identify metric ties with the best option (within the metric tolerance).
-    tied = [
-        name
-        for name, value in scored
-        if abs(value - best_metric) <= tolerance
-    ]
-
-    tie_resolution: str | None = None
-    selected = best_name
-
-    if len(tied) > 1:
-        # Step 2: prefer the lower journey time among the tied options.
-        journey_times = {
-            name: _journey_float(results[name]) for name in tied
+    if feasible_candidates:
+        metrics = {n: _metric_value(results[n], priority) for n in feasible_candidates}
+        blocked = {
+            name: tuple(m.missing_inputs) + tuple(m.invalid_inputs)
+            for name, m in metrics.items()
+            if isinstance(m, Unavailable)
         }
-        resolvable = {
-            name: jt for name, jt in journey_times.items() if jt is not None
-        }
-        if resolvable:
-            min_jt = min(resolvable.values())
-            jt_leaders = [
-                name
-                for name, jt in resolvable.items()
-                if abs(jt - min_jt) <= TIE_TOLERANCE_HOURS
-            ]
-        else:
-            jt_leaders = list(tied)
-
-        if len(jt_leaders) == 1:
-            selected = jt_leaders[0]
-            tie_resolution = (
-                f"metric tie within {tolerance} resolved by lower journey time"
+        if blocked:
+            return Selection(
+                selected_option=None, no_feasible_option=False, closest_option=None,
+                message=(
+                    f"No selection was made: the {priority} metric is unavailable "
+                    f"for {_describe_unresolved(blocked)}."
+                ),
+                outcome="priority_metric_unavailable", unresolved_inputs=blocked,
+                **common,
             )
-        else:
-            # Step 3: Panama convention (a disclosed deterministic CONVENTION,
-            # NOT evidence Panama is superior).
-            if "panama" in jt_leaders:
-                selected = "panama"
-            else:
-                selected = sorted(jt_leaders)[0]
-            tie_resolution = (
-                "metric and journey time tied within tolerance; resolved by the "
-                "Panama tie-break convention (a disclosed deterministic rule, "
-                "not evidence Panama is superior)"
+        selected, tie_resolution = _pick_by_metric(
+            priority, results, {n: float(m) for n, m in metrics.items()}
+        )
+        message = _selection_message(selected, priority, tie_resolution)
+        if undetermined:
+            message += (
+                " Not compared because its deadline status is undetermined: "
+                f"{_describe_unresolved(undetermined)}."
             )
+        return Selection(
+            selected_option=selected,  # type: ignore[arg-type]
+            priority=priority, no_feasible_option=False, closest_option=None,
+            tie_resolution=tie_resolution, message=message, outcome="selected",
+            unresolved_inputs=undetermined,
+        )
 
-    message = _selection_message(selected, priority, tie_resolution)
+    if undetermined:
+        misses = [n for n in candidate_names if results[n].feasible is False]
+        message = (
+            "No selection was made because the deadline status is undetermined "
+            f"for {_describe_unresolved(undetermined)}."
+        )
+        for name in misses:
+            message += f" {_label(name)} misses the deadline."
+        return Selection(
+            selected_option=None, no_feasible_option=False, closest_option=None,
+            message=message, outcome="feasibility_undetermined",
+            unresolved_inputs=undetermined, **common,
+        )
 
+    closest = _closest_by_journey(results, candidate_names)
+    if len(candidate_names) > 1:
+        message = "Neither route meets the deadline, so no selection was made."
+        if closest is not None:
+            message += f" The faster route is {_label(closest)}."
+    else:
+        only = candidate_names[0]
+        message = (
+            f"The only available route, {_label(only)}, misses the deadline, "
+            "so no selection was made."
+        )
+        for name, reason in reasons.items():
+            if name != only:
+                message += f" {_label(name)} is excluded: {reason}."
     return Selection(
-        selected_option=selected,  # type: ignore[arg-type]
-        priority=priority,
-        no_feasible_option=False,
-        closest_option=None,
-        tie_resolution=tie_resolution,
-        message=message,
+        selected_option=None, no_feasible_option=True,
+        closest_option=closest,  # type: ignore[arg-type]
+        message=message, outcome="all_available_miss", **common,
     )
 
 

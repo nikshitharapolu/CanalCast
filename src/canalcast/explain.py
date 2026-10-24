@@ -170,25 +170,15 @@ def explain(result: ComparisonResult, max_words: int = 120) -> str:
         described: Optional[OptionResult] = _option_by_name(
             result, selection.selected_option
         )
-    elif selection.no_feasible_option:
-        if selection.closest_option is not None:
-            closest_label = selection.closest_option.capitalize()
-            sentences.append(
-                "No option meets the deadline in this scenario; the closest "
-                f"by journey time is {closest_label} (priority {priority})."
-            )
-            described = _option_by_name(result, selection.closest_option)
-        else:
-            sentences.append(
-                "No option meets the deadline in this scenario and no closest "
-                f"option is available (priority {priority})."
-            )
-            described = None
     else:
-        sentences.append(
-            f"This scenario reports no selected option (priority {priority})."
+        # Non-selected outcomes reuse the core's scoped message (Task 15.2), so
+        # the explanation never claims a deadline miss the core didn't establish.
+        sentences.append(selection.message)
+        described = (
+            _option_by_name(result, selection.closest_option)
+            if selection.closest_option is not None
+            else None
         )
-        described = None
 
     # --- Metrics for the selected/closest option ------------------------
     if described is not None:
@@ -197,10 +187,15 @@ def explain(result: ComparisonResult, max_words: int = 120) -> str:
 
     # --- Panama tie-break convention, if used (Requirement 11.8) --------
     if selection.tie_resolution is not None:
-        sentences.append(
-            "The outcome was settled by a disclosed Panama tie-break "
-            "convention, not a claim of route superiority."
-        )
+        if "Panama tie-break convention" in selection.tie_resolution:
+            sentences.append(
+                "A full tie was settled by the disclosed Panama tie-break "
+                "convention, not a claim of route superiority."
+            )
+        else:
+            sentences.append(
+                "A tie on the priority metric was settled by the lower journey time."
+            )
 
     return _cap_words(" ".join(sentences), max_words)
 

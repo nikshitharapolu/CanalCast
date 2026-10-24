@@ -20,6 +20,7 @@ import math
 from typing import Union
 
 from .models import (
+    NotModeled,
     ContainerUnit,  # noqa: F401  (domain type referenced in docs / signatures)
     DraftLoss,
     EmissionFactor,
@@ -77,7 +78,7 @@ def sailing_time_hours(
 def journey_time_hours(
     sailing_h: Union[float, Unavailable, None],
     canal_duration_h: Union[float, Unavailable, None],
-    waiting_duration_h: Union[float, Unavailable, None],
+    waiting_duration_h: Union[float, Unavailable, NotModeled, None],
 ) -> ResultOrUnavailable[float]:
     """Total journey time = sailing + canal + waiting (hours).
 
@@ -121,6 +122,9 @@ def journey_time_hours(
             invalid_inputs=("canal_duration_h",),
         )
 
+    if isinstance(waiting_duration_h, NotModeled):
+        # Suez: waiting is outside the model, so journey = sailing + canal (Req 6.6).
+        return float(sailing_h) + float(canal_duration_h)
     if isinstance(waiting_duration_h, Unavailable):
         return Unavailable(
             reason="journey time requires waiting_duration, which is unavailable",
@@ -304,7 +308,7 @@ def canal_fuel_t(
 
 def total_voyage_fuel_t(
     sailing_fuel: Union[float, Unavailable],
-    waiting_fuel: Union[float, Unavailable],
+    waiting_fuel: Union[float, Unavailable, NotModeled],
     canal_fuel: Union[float, Unavailable],
 ) -> ResultOrUnavailable[float]:
     """Total voyage fuel (tonnes) = sailing + waiting + canal.
@@ -314,10 +318,15 @@ def total_voyage_fuel_t(
     unavailable and names every unresolved component -- the caller (comparison)
     is responsible for labelling a sailing-only figure as a partial estimate.
     """
-    components = (
-        ("sailing_fuel", sailing_fuel),
-        ("waiting_fuel", waiting_fuel),
-        ("canal_fuel", canal_fuel),
+    components = tuple(
+        (name, value)
+        for name, value in (
+            ("sailing_fuel", sailing_fuel),
+            ("waiting_fuel", waiting_fuel),
+            ("canal_fuel", canal_fuel),
+        )
+        # Suez waiting fuel is outside the model, not unresolved (Req 7.7).
+        if not isinstance(value, NotModeled)
     )
     missing = tuple(name for name, value in components if isinstance(value, Unavailable))
     if missing:
@@ -337,7 +346,7 @@ def total_voyage_fuel_t(
             invalid_inputs=invalid,
         )
 
-    return float(sailing_fuel) + float(waiting_fuel) + float(canal_fuel)
+    return sum(float(value) for _, value in components)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------

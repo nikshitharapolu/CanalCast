@@ -44,10 +44,13 @@ from __future__ import annotations
 from typing import Mapping
 
 from ..explain import explain
-from ..models import ProvenancedValue, Status, Unavailable
+from ..models import NotModeled, ProvenancedValue, Status, Unavailable
 from ..results import ComparisonResult, OptionResult
 
 __all__ = ["render_results", "render_disclosure_panel"]
+
+#: Text the core records when the final Panama convention resolved a tie.
+PANAMA_CONVENTION_MARKER = "Panama tie-break convention"
 
 
 # --------------------------------------------------------------------------- #
@@ -117,6 +120,8 @@ def _format_metric(value: object, unit: str) -> str:
         A human-readable ``"<number> <unit>"`` string for a real number, or an
         ``"unavailable"`` string (naming inputs when known) otherwise.
     """
+    if isinstance(value, NotModeled):
+        return "Not modeled"
     if isinstance(value, Unavailable):
         names = _unavailable_inputs(value)
         if names:
@@ -264,7 +269,18 @@ def _render_option_column(option: OptionResult, label: str) -> None:
         _format_metric(option.co2_tank_to_wake_t, "t CO2"),
     )
 
+    # Task 15.1: a partial figure is never shown under the headline labels.
+    if option.sailing_only_label:
+        st.caption(
+            f"{option.sailing_only_label}: fuel cost "
+            f"{_format_metric(option.sailing_only_fuel_cost_usd, 'USD')}, CO2 "
+            f"{_format_metric(option.sailing_only_co2_t, 't CO2')}."
+        )
+
     st.metric("Deadline status", _deadline_label(option))
+
+    if option.waiting_not_modeled_disclosure:
+        st.caption(option.waiting_not_modeled_disclosure)
 
     # Req 20.11: optional draft-based cargo-loss figures. Only rendered when the
     # adjustment is enabled for this option (Panama); when disabled the panel is
@@ -316,25 +332,21 @@ def _render_selection(result: ComparisonResult) -> None:
     st.markdown("### Selection")
     st.write(selection.message)
 
-    if selection.no_feasible_option:
-        if selection.closest_option is not None:
-            closest = selection.closest_option.capitalize()
-            st.info(
-                "No option meets the deadline in this scenario. The closest by "
-                f"journey time is {closest}."
-            )
-        else:
-            st.info(
-                "No option meets the deadline in this scenario and no closest "
-                "option is available."
-            )
+    if selection.no_feasible_option and selection.closest_option is not None:
+        st.info(
+            "No available route meets the deadline. The faster available route "
+            f"is {selection.closest_option.capitalize()}."
+        )
 
     if selection.tie_resolution is not None:
-        st.caption(
-            "The outcome was settled by a disclosed Panama tie-break convention "
-            f"({selection.tie_resolution}). This is a disclosed deterministic "
-            "convention, not evidence that Panama is the superior route."
-        )
+        if PANAMA_CONVENTION_MARKER in selection.tie_resolution:
+            st.caption(
+                "A full tie was settled by the disclosed Panama tie-break "
+                "convention. This is a deterministic convention, not evidence "
+                "that Panama is the superior route."
+            )
+        else:
+            st.caption(f"Tie resolution: {selection.tie_resolution}.")
 
 
 def render_results(result: ComparisonResult) -> None:
@@ -429,10 +441,18 @@ def _render_provenance_for_option(
     for name, pv in provenance.items():
         status = _status_label(pv.status)
         date_text = _format_date(pv)
-        line = f"- **{name}** — {pv.rationale} (status: {status}"
+        unit = "" if pv.unit in ("", "-") else f" {pv.unit}"
+        line = f"- **{name}** = {pv.value}{unit} — {pv.rationale} (status: {status}"
+        raw = getattr(pv, "source_status", None)
+        if raw and raw != getattr(pv.status, "value", pv.status):
+            line += f", source label: {raw}"
         if date_text is not None:
             line += f", data date: {date_text}"
         line += ")"
+        if pv.method:
+            line += f"; method: {pv.method}"
+        if pv.derivation:
+            line += f"; derivation: {pv.derivation}"
         st.markdown(line)
 
 

@@ -150,34 +150,34 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - Toggle defaulting OFF; when on, containers-lost-per-10cm slider seeded from the loaded estimate and an avg-TEU-per-container input; display Draft_Shortfall_Ft, Containers_Lost, TEU_Lost and the analyst-estimate/assumption disclosures alongside the Panama option; panel unchanged when off
     - _Requirements: 20.11_
 
-- [ ] 15. Stabilize the original MVP after implementation review
-  - [ ] 15.1 Correct voyage-fuel dependency semantics in calculations, comparison, results, and UI
+- [x] 15. Stabilize the original MVP after implementation review
+  - [x] 15.1 Correct voyage-fuel dependency semantics in calculations, comparison, results, and UI
     - Require resolved total voyage fuel for fields labeled voyage fuel cost or voyage CO2; never fall back to sailing fuel, and never use a partial metric for route selection. Expose any partial/sailing-only figure only through a separately named field and label.
     - Add regression tests, including the default positive canal duration with no canal fuel rate.
     - _Requirements: 3.1–3.4, 7.4–7.5, 8.1, 8.5, 9.1, 11.4; Review finding: 1 (partial fuel presented as voyage totals)._
-  - [ ] 15.2 Correct deadline and eligibility states
+  - [x] 15.2 Correct deadline and eligibility states
     - Distinguish missing deadline/undetermined feasibility, no available option meeting the deadline, no available option with resolvable journey time, and both available routes missing. Say "neither route meets the deadline" only when both available routes have resolved times and both miss; identify the faster available route and select none.
     - Implement the ordered outcome table in design.md "Deadline status and selection outcomes" (selected, all_available_miss, feasibility_undetermined, priority_metric_unavailable, no_available_option, comparison_rejected).
     - Add regression tests for missing-deadline and Suez-excluded scenarios.
     - _Requirements: 3.1–3.4, 6.10–6.11, 11.3–11.5; Design: "Deadline status and selection outcomes"; Review finding: 2 (deadline-state collapse)._
-  - [ ] 15.3 Restore the original MVP draft boundary
+  - [x] 15.3 Restore the original MVP draft boundary
     - Hide/remove draft-loss controls and outputs from the Streamlit MVP and keep `Scenario` defaults off; retain future-v2 core code only as dormant functionality. If explicitly enabled with a missing loss slope or another required input, make payload and dependent per-TEU outputs `Unavailable` instead of retaining base payload or injecting a hard-coded default.
     - Make draft copy conditional and add regression tests proving the MVP treats draft as context only; defer the version-2 UI activation outside the MVP.
     - _Requirements: 10.1–10.4, 19.4; Future-v2 safeguards: 20.1, 20.5, 20.8; Review findings: 4–5 (draft-loss fail-open and context-only copy)._
-  - [ ] 15.4 Correct selection disclosure and provenance
+  - [x] 15.4 Correct selection disclosure and provenance
     - Render the recorded tie resolution accurately and mention the Panama convention only when that final convention resolved the tie. Include every result-driving scenario input and the selected `EmissionFactor` in `input_provenance`; render value, unit, rationale/source, status, date when available, and derivation/method when relevant.
     - Add core, explanation, and rendered-view regression tests.
     - _Requirements: 1.5–1.6, 2.1, 2.4, 11.7–11.8, 11.10, 15.1; Review findings: 3 and 6 (tie disclosure and incomplete provenance)._
-  - [ ] 15.5 Preserve source trust status during loading
+  - [x] 15.5 Preserve source trust status during loading
     - Support the source statuses present in the supplied CSVs without silently upgrading trust: retain each raw status, map to a canonical status only through an explicit documented mapping, never default an unknown status to `sourced`, and reject or mark unavailable truly unknown statuses. Do not modify the original CSV files.
     - Add loader tests for mapped source statuses and unknown-status rejection/unavailability.
     - _Requirements: 1.4–1.5, 2.2–2.3, 2.5; Review finding: 7 (forbidden statuses silently rewritten)._
-  - [ ] 15.6 Align UI/docs and add rendered regression coverage
+  - [x] 15.6 Align UI/docs and add rendered regression coverage
     - Add focused Streamlit AppTest coverage for partial/unavailable metrics, deadline states, Suez exclusion, tie text, MVP draft-context copy, provenance, and missing optional series. Remove or correct UI-test-coverage claims until the tests exist.
     - Keep v1 local-only; remove Community Cloud instructions or mark them clearly future/out-of-scope so they do not conflict with localhost binding. Replace deprecated `use_container_width` usage.
     - Re-run `compileall` and the full pinned pytest suite; record that Python 3.11 validation remains required if it is unavailable locally.
     - _Requirements: 4.2–4.5, 14.3–14.5, 15.1–15.3, 16.2–16.5, 19.3, 19.5–19.8; Review findings: 8–9 plus rendered coverage for findings 1–7._
-  - [ ] 15.7 Apply waiting time to the Panama route only; mark Suez waiting as not modeled
+  - [x] 15.7 Apply waiting time to the Panama route only; mark Suez waiting as not modeled
     - Core (`models.py`, `calculations.py`, `comparison.py`, `results.py`): add a frozen `NotModeled(reason)` type and make `journey_time_hours` take a required waiting argument. `compute_option` reads `waiting_duration_h` only for Panama. Suez uses `SUEZ_WAITING_NOT_MODELED` for both waiting fields, computes total voyage fuel as sailing + canal, and adds the "Suez waiting time (not modeled)" exclusion and `waiting_not_modeled_disclosure`. A missing or invalid waiting value disables only Panama's journey time and its dependent outputs, names `waiting_duration_h`, and leaves Suez computed. Never fill a missing waiting value with zero.
     - UI and explanation (`controls.py`, `views.py`, `explain.py`): label the control "Panama waiting time (days)" with help text that it applies only to the Panama route and Suez waiting isn't modeled. Render `NotModeled` as "Not modeled", never as 0 or "unavailable", and show the Suez disclosure.
     - Tests: write Property 16 as one Hypothesis test tagged `# Feature: canalcast, Property 16: ...`. Suez journey time stays unchanged as waiting varies, and Panama satisfies `math.isclose(jt(w2), jt(w1) + (w2 - w1), rel_tol=1e-9)`. Worked example: Shanghai → New York, 18 kn, 12 h canal time on both routes, 40-day deadline, priority "fastest". 3 days of Panama waiting selects Panama (28.1 vs 29.2 days); 5 days selects Suez (30.1 vs 29.2 days); the break-even is 96.7 h. Also test that a missing waiting value leaves Panama undetermined with no false "neither route" message while Suez still computes, and that the Suez result is identical whether waiting is present, zero, missing, or invalid.

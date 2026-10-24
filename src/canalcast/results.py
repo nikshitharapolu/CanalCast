@@ -19,7 +19,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal, Mapping
 
-from .models import ProvenancedValue, ResultOrUnavailable, Unavailable
+from .models import NotModeled, ProvenancedValue, ResultOrUnavailable, Unavailable
+
+#: Fixed label attached to the sailing-only partial estimates on
+#: :class:`OptionResult`. Those figures exclude unresolved canal/waiting fuel, so
+#: they are never voyage totals and are never used for selection or ranking.
+SAILING_ONLY_LABEL = "Sailing-only estimate (excludes unresolved canal/waiting fuel)"
 
 
 @dataclass(frozen=True)
@@ -41,7 +46,7 @@ class JourneyTimeBreakdown:
 
     sailing_time_h: ResultOrUnavailable[float]
     canal_duration_h: ResultOrUnavailable[float]
-    waiting_duration_h: ResultOrUnavailable[float]
+    waiting_duration_h: ResultOrUnavailable[float] | NotModeled
     journey_time_h: ResultOrUnavailable[float]  # sum when all parts present (Req 6.5)
 
 
@@ -101,12 +106,16 @@ class OptionResult:
         journey: Journey-time breakdown for this option.
         fuel: Fuel breakdown for this option.
         loaded_teu: Loaded payload in TEU, or ``Unavailable``.
-        voyage_fuel_cost_usd: Voyage fuel cost in USD, or ``Unavailable``.
+        voyage_fuel_cost_usd: Voyage fuel cost in USD computed from RESOLVED
+            total voyage fuel only (Requirement 8.1), or ``Unavailable`` naming
+            the unresolved fuel component(s) — never a sailing-only figure.
         fuel_cost_per_teu_usd: Fuel cost per loaded TEU in USD, set to
             ``Unavailable(reason="loaded TEU is zero")`` when payload is zero
-            (Requirement 8.4).
+            (Requirement 8.4), and ``Unavailable`` whenever total voyage fuel
+            is unresolved.
         co2_tank_to_wake_t: Tank-to-wake CO2 in tonnes — NOT lifecycle
-            (Requirement 9.5), or ``Unavailable``.
+            (Requirement 9.5) — from RESOLVED total voyage fuel only
+            (Requirement 9.1), or ``Unavailable``.
         feasible: ``True``/``False`` when journey time is known
             (``journey_time_h <= deadline_h``); ``None`` if journey time is
             unavailable.
@@ -142,6 +151,14 @@ class OptionResult:
             enabled, stating the adjustment rests on an analyst-estimate
             containers-lost figure and an assumption average-TEU-per-container
             factor; ``None`` when disabled (Requirement 20.9).
+        sailing_only_fuel_cost_usd: Sailing-only fuel cost in USD (sailing fuel
+            x bunker price). Populated ONLY when total voyage fuel is
+            unresolved but sailing fuel is resolved, else ``None``. A partial
+            estimate, not a voyage total; never used for selection or ranking.
+        sailing_only_co2_t: Sailing-only tank-to-wake CO2 in tonnes, under the
+            same rule as :attr:`sailing_only_fuel_cost_usd`.
+        sailing_only_label: :data:`SAILING_ONLY_LABEL` whenever the sailing-only
+            fields are populated, else ``None``.
     """
 
     option: Literal["panama", "suez"]
@@ -179,6 +196,18 @@ class OptionResult:
     teu_lost: float | None = None
     draft_loss_disclosure: str | None = None
 
+    # Sailing-only partial estimates. Populated only when total voyage fuel is
+    # unresolved but sailing fuel is resolved; they are NOT voyage totals, carry
+    # SAILING_ONLY_LABEL, and selection/ranking never reads them. Defaults keep
+    # existing construction unaffected.
+    sailing_only_fuel_cost_usd: ResultOrUnavailable[float] | None = None
+    sailing_only_co2_t: ResultOrUnavailable[float] | None = None
+    sailing_only_label: str | None = None
+    # When deadline_status is "undetermined": the inputs that caused it.
+    deadline_undetermined_inputs: tuple[str, ...] = ()
+    # Suez only: fixed text that Suez waiting is not modeled (Req 6.12, 15.2).
+    waiting_not_modeled_disclosure: str | None = None
+
 
 @dataclass(frozen=True)
 class Selection:
@@ -194,8 +223,9 @@ class Selection:
         selected_option: The chosen option, or ``None`` when none is feasible
             (Requirement 11.5).
         priority: The Selection_Priority metric used.
-        no_feasible_option: ``True`` when no option meets the deadline.
-        closest_option: Minimum-journey-time option when none is feasible
+        no_feasible_option: ``True`` only when every available option has a
+            resolved journey time and misses the deadline.
+        closest_option: Faster available route in that case
             (Requirement 11.5), else ``None``.
         tie_resolution: Which tie step resolved the selection (Requirement 11.8),
             or ``None`` when no tie-break was needed.
@@ -208,6 +238,11 @@ class Selection:
     closest_option: Literal["panama", "suez"] | None
     tie_resolution: str | None
     message: str
+    #: One of: selected, all_available_miss, feasibility_undetermined,
+    #: priority_metric_unavailable, no_available_option, comparison_rejected.
+    outcome: str = "selected"
+    #: Per available option left uncompared: the missing/invalid inputs named.
+    unresolved_inputs: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
