@@ -34,57 +34,57 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - Required-file-missing abort, each provenance-rejection branch, optional-series available/not-found/unreadable
     - _Requirements: 1.8, 1.9, 2.3, 2.4, 4.2, 4.3_
 
-- [-] 3. Checkpoint - loader and models
+- [x] 3. Checkpoint - loader and models
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Pure calculation functions (`src/canalcast/calculations.py`)
-  - [~] 4.1 Implement time functions: `sailing_time_hours` and `journey_time_hours`
+- [x] 4. Pure calculation functions (`src/canalcast/calculations.py`)
+  - [x] 4.1 Implement time functions: `sailing_time_hours` and `journey_time_hours`
     - Sailing time = distance/speed when distance > 0 and speed > 0; `Unavailable` naming invalid speed when speed ≤ 0; `Unavailable` naming missing distance when absent
     - Journey time = sailing + canal + waiting when all present and ≥ 0; `Unavailable` naming the offending duration when any is missing/negative; waiting derived only from its explicit input, never from a booking-slot limit
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
-  - [~] 4.2 Implement fuel functions: `fuel_rate_t_per_day`, `sailing_fuel_t`, and waiting/canal fuel line items
+  - [x] 4.2 Implement fuel functions: `fuel_rate_t_per_day`, `sailing_fuel_t`, and waiting/canal fuel line items
     - Cubic curve `base_fuel * (speed/base_speed)^exponent` using loaded constants only, no alternate ship profile; sailing fuel = rate × sailing days
     - Waiting/canal fuel as distinct line items (never folded into sailing fuel). Zero duration ⇒ zero fuel even when its fuel rate is absent (always resolvable); positive duration + absent rate ⇒ `Unavailable` (unresolved input). Apply the identical rule to both waiting and canal fuel
     - `total_voyage_fuel_t` is reported as "total" only when sailing, waiting, and canal components are all resolved; when any component is `Unavailable`, label the available figure as a sailing-only/partial estimate and mark the total `Unavailable` naming the missing components
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
-  - [~] 4.3 Implement cost and TEU functions: `voyage_fuel_cost_usd`, `loaded_teu`, `fuel_cost_per_teu_usd`
+  - [x] 4.3 Implement cost and TEU functions: `voyage_fuel_cost_usd`, `loaded_teu`, `fuel_cost_per_teu_usd`
     - Cost = total fuel × bunker price; loaded TEU = capacity × load factor for load factor in [0,1]; cost/TEU when loaded TEU > 0
     - Loaded TEU zero ⇒ cost/TEU `Unavailable(reason="loaded TEU is zero")`, never zero/invented; required-input-missing or load factor out of [0,1] ⇒ affected output `Unavailable`; label output "fuel cost", never "total shipping cost"; record exclusions (tolls, insurance, surcharges)
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8_
-  - [~] 4.4 Implement CO2 function `co2_tank_to_wake_t` and container-to-TEU conversion
+  - [x] 4.4 Implement CO2 function `co2_tank_to_wake_t` and container-to-TEU conversion
     - CO2 = total fuel × emission factor using a fuel type that exactly matches; mismatch or missing factor ⇒ `Unavailable`; label tank-to-wake, not lifecycle
     - Container conversion: exactly 1 TEU per 20ft, 2 TEU per 40ft; unsupported type ⇒ leave TEU missing, disable only that conversion, keep other quantities
     - _Requirements: 5.3, 5.4, 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 5. Result structures (`src/canalcast/results.py`)
-  - [~] 5.1 Define `JourneyTimeBreakdown`, `FuelBreakdown`, `OptionResult`, `Selection`, `ComparisonResult`
+- [x] 5. Result structures (`src/canalcast/results.py`)
+  - [x] 5.1 Define `JourneyTimeBreakdown`, `FuelBreakdown`, `OptionResult`, `Selection`, `ComparisonResult`
     - Per-option units map, feasibility, deadline status, infeasible flag/reason, `draft_context_ft` + fixed draft-not-modeled disclosure, exclusions, cost label, input provenance, and fixed disclaimer "Scenario tool — not a forecast."
     - _Requirements: 8.6, 8.8, 10.1, 10.3, 10.4, 11.10_
 
-- [ ] 6. Route comparison and selection (`src/canalcast/comparison.py`)
-  - [~] 6.1 Implement `compute_option` assembling a full `OptionResult` from the calculation functions
+- [x] 6. Route comparison and selection (`src/canalcast/comparison.py`)
+  - [x] 6.1 Implement `compute_option` assembling a full `OptionResult` from the calculation functions
     - Independent evaluation: one disabled calculation never suppresses another whose inputs are present; draft carried as context only, never reducing TEU/cost/fuel/CO2; zero loaded TEU ⇒ Infeasible_Result with undefined cost/TEU
     - _Requirements: 3.1, 3.4, 10.1, 10.3, 10.4, 11.9_
-  - [~] 6.2 Implement `compare_od_pair` with priority selection, tie handling, and deadline handling
+  - [x] 6.2 Implement `compare_od_pair` with priority selection, tie handling, and deadline handling
     - Require both Panama and Suez distances > 0 or reject with a naming `comparison_error`; treat Suez availability as explicit assumption and exclude+record when unavailable; select the single non-excluded Feasible_Option minimizing the chosen metric (no weighted composites); exclude zero-TEU option from cost/TEU selection
     - Per-metric tie tolerances defined separately in each metric's own units (journey time in hours, cost/TEU in USD/TEU, CO2 in tonnes) with documented values; tie-break order = metric, then lower journey time, then Panama; record which tie step resolved it. The final Panama tie-break is a deterministic CONVENTION — disclose it as such in `Selection`/messaging, not as evidence Panama is superior
     - Deadline-miss: when no option is feasible, make no selection, identify the faster available route by minimum journey time, and state clearly that NEITHER route meets the deadline
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 11.10_
 
-- [ ] 7. Deterministic explanation (`src/canalcast/explain.py`)
-  - [~] 7.1 Implement `explain(result, max_words=120)` deriving every value solely from the current `ComparisonResult`
+- [x] 7. Deterministic explanation (`src/canalcast/explain.py`)
+  - [x] 7.1 Implement `explain(result, max_words=120)` deriving every value solely from the current `ComparisonResult`
     - No runtime network call; ≤120 words; omit and name missing values (never invent); never imply forecast/prediction
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5_
 
-- [ ] 8. Core test suite (`src/tests/`) — must pass before any UI code (Req 19.1, 19.2)
-  - [ ]* 8.1 Write the no-I/O boundary test (`test_no_io_boundary.py`)
+- [x] 8. Core test suite (`src/tests/`) — must pass before any UI code (Req 19.1, 19.2)
+  - [x]* 8.1 Write the no-I/O boundary test (`test_no_io_boundary.py`)
     - Parse calculations/comparison/results/models/explain and assert no file-I/O or network imports
     - _Requirements: 1.3, 1.7, 19.4_
-  - [ ]* 8.2 Write worked-example and edge-case unit tests (`test_calculations.py`)
+  - [x]* 8.2 Write worked-example and edge-case unit tests (`test_calculations.py`)
     - **Property 1: worked examples within 1e-9** — sailing time, cubic rate (~95.9 t/day at 18 kn, record 109 check target as context), voyage cost, loaded TEU 8500, cost/TEU, HFO CO2
     - Four waiting-fuel cases (zero/positive duration × rate present/absent) and the identical four canal-fuel cases; partial-fuel case asserts sailing-only/partial label with total `Unavailable` naming missing components
     - **Validates: Requirements 18.1, 7.4, 7.5**
-  - [ ]* 8.3 Write calculation property tests (`test_calculations.py`)
+  - [x]* 8.3 Write calculation property tests (`test_calculations.py`)
     - **Property 2: fuel and CO2 non-negative for valid inputs** — _Requirements 18.2_
     - **Property 3: sailing fuel monotonic in distance** — _Requirements 18.3_
     - **Property 4: higher speed strictly shortens sailing time** — _Requirements 18.4_
@@ -95,7 +95,7 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - **Property 12: container-to-TEU conversion exact and type-guarded** — _Requirements 5.3, 5.4_
     - **Property 15: CO2 requires an exactly matching fuel type** — _Requirements 9.2, 9.3, 9.4_
     - Each property is one Hypothesis test, ≥100 iterations, tagged `# Feature: canalcast, Property N: ...`
-  - [ ]* 8.4 Write comparison and selection property tests (`test_comparison.py`)
+  - [x]* 8.4 Write comparison and selection property tests (`test_comparison.py`)
     - **Property 6: a feasible option is never passed over for an infeasible one** — _Requirements 11.4, 18.6_
     - **Property 7: selection minimizes the chosen priority metric** — _Requirements 11.4, 11.6_
     - **Property 8: tie handling is deterministic (per-metric tolerance, Panama convention)** — _Requirements 11.7, 11.8_
@@ -103,7 +103,7 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - **Property 14: optional-series absence does not block the comparison** — _Requirements 4.4, 4.5_
     - Both-miss deadline case: assert faster route identified AND "neither meets the deadline" statement present, no selection made — _Requirements 11.5_
 
-- [~] 9. Checkpoint - core complete and gated
+- [-] 9. Checkpoint - core complete and gated
   - Ensure all core tests pass. The UI phase (Tasks 10+) MUST NOT begin until this checkpoint is green (Requirements 19.1, 19.2). Ask the user if questions arise.
 
 - [ ] 10. Streamlit presets and controls (`src/canalcast/ui/controls.py`)

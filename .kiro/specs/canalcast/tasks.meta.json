@@ -113,6 +113,11 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792863851467
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863894068
       }
     ],
     "4.1 Implement time functions: `sailing_time_hours` and `journey_time_hours`": [
@@ -120,6 +125,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881605
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863898955
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864085708
       }
     ],
     "4.2 Implement fuel functions: `fuel_rate_t_per_day`, `sailing_fuel_t`, and waiting/canal fuel line items": [
@@ -127,6 +142,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881629
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863900268
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864086996
       }
     ],
     "4.3 Implement cost and TEU functions: `voyage_fuel_cost_usd`, `loaded_teu`, `fuel_cost_per_teu_usd`": [
@@ -134,6 +159,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881655
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863901668
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864088423
       }
     ],
     "4.4 Implement CO2 function `co2_tank_to_wake_t` and container-to-TEU conversion": [
@@ -141,6 +176,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881703
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863903143
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864089794
       }
     ],
     "5.1 Define `JourneyTimeBreakdown`, `FuelBreakdown`, `OptionResult`, `Selection`, `ComparisonResult`": [
@@ -148,6 +193,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881733
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863904065
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864090883
       }
     ],
     "6.1 Implement `compute_option` assembling a full `OptionResult` from the calculation functions": [
@@ -155,6 +210,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881764
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864094211
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864225376
       }
     ],
     "6.2 Implement `compare_od_pair` with priority selection, tie handling, and deadline handling": [
@@ -162,6 +227,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881795
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864229761
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864456283
       }
     ],
     "7.1 Implement `explain(result, max_words=120)` deriving every value solely from the current `ComparisonResult`": [
@@ -169,6 +244,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881820
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864228896
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864457422
       }
     ],
     "9. Checkpoint - core complete and gated": [
@@ -176,6 +261,11 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881866
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864746566
       }
     ],
     "10.1 Implement presets and custom scenario": [
@@ -244,6 +334,89 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792863847944
+      }
+    ],
+    "4. Pure calculation functions (`src/canalcast/calculations.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864089870
+      }
+    ],
+    "5. Result structures (`src/canalcast/results.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864090977
+      }
+    ],
+    "6. Route comparison and selection (`src/canalcast/comparison.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864456357
+      }
+    ],
+    "7. Deterministic explanation (`src/canalcast/explain.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864457504
+      }
+    ],
+    "8.1 Write the no-I/O boundary test (`test_no_io_boundary.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864462918
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864739293
+      }
+    ],
+    "8.2 Write worked-example and edge-case unit tests (`test_calculations.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864464311
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864740645
+      }
+    ],
+    "8.3 Write calculation property tests (`test_calculations.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864465728
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864741647
+      }
+    ],
+    "8.4 Write comparison and selection property tests (`test_comparison.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864466404
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864742557
+      }
+    ],
+    "8. Core test suite (`src/tests/`) — must pass before any UI code (Req 19.1, 19.2)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864739342
       }
     ]
   }
