@@ -1,0 +1,583 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Define `Status` enum and `ProvenancedValue` with value/unit/rationale/status plus optional `retrieved_on`, `method`, `derived_from`, `derivation`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862879360
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862889670
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862968183
+      }
+    ],
+    "1.2 Define domain records `RouteOption`, `ODPair`, `EmissionFactor`, `CanalState`, `ContainerUnit`, `Constants`, `OptionalSeries`, `LoadResult`, `Scenario`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862879444
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862972495
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863149946
+      }
+    ],
+    "1.3 Define the `Unavailable` type and `ResultOrUnavailable` alias (reason + missing_inputs + invalid_inputs)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881240
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862973686
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863026631
+      }
+    ],
+    "2.1 Implement required-data loading (`load_required`) reading routes, constants, canal_states, container_units, emission_factors read-only from `data/`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881400
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863155334
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863519924
+      }
+    ],
+    "2.2 Implement provenance validation on every Model_Input": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881491
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863156050
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863520843
+      }
+    ],
+    "2.3 Implement optional-series loading (`load_optional`) and assemble `load_all` into a `LoadResult`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881532
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863524306
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863642110
+      }
+    ],
+    "3. Checkpoint - loader and models": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881577
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863851467
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863894068
+      }
+    ],
+    "4.1 Implement time functions: `sailing_time_hours` and `journey_time_hours`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881605
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863898955
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864085708
+      }
+    ],
+    "4.2 Implement fuel functions: `fuel_rate_t_per_day`, `sailing_fuel_t`, and waiting/canal fuel line items": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881629
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863900268
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864086996
+      }
+    ],
+    "4.3 Implement cost and TEU functions: `voyage_fuel_cost_usd`, `loaded_teu`, `fuel_cost_per_teu_usd`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881655
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863901668
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864088423
+      }
+    ],
+    "4.4 Implement CO2 function `co2_tank_to_wake_t` and container-to-TEU conversion": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881703
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863903143
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864089794
+      }
+    ],
+    "5.1 Define `JourneyTimeBreakdown`, `FuelBreakdown`, `OptionResult`, `Selection`, `ComparisonResult`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881733
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863904065
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864090883
+      }
+    ],
+    "6.1 Implement `compute_option` assembling a full `OptionResult` from the calculation functions": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881764
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864094211
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864225376
+      }
+    ],
+    "6.2 Implement `compare_od_pair` with priority selection, tie handling, and deadline handling": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881795
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864229761
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864456283
+      }
+    ],
+    "7.1 Implement `explain(result, max_words=120)` deriving every value solely from the current `ComparisonResult`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881820
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864228896
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864457422
+      }
+    ],
+    "9. Checkpoint - core complete and gated": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881866
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864746566
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864772068
+      }
+    ],
+    "10.1 Implement presets and custom scenario": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881896
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864778612
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865009149
+      }
+    ],
+    "10.2 Implement scenario input controls with range enforcement": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881920
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864776435
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865010169
+      }
+    ],
+    "11.1 Implement side-by-side results view and disclosure panel (`views.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881948
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865014154
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865182128
+      }
+    ],
+    "11.2 Implement ONI/RONI historical charts (`charts.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881973
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864777885
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865011085
+      }
+    ],
+    "12.1 Compose loader → core → explanation → UI in `app.py`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862882008
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865185065
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865400646
+      }
+    ],
+    "13.1 Create a pinned `requirements.txt` and document local run + Streamlit deploy in the README": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862882058
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865409194
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865524718
+      }
+    ],
+    "1. Typed domain models and provenance (`src/canalcast/models.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863149983
+      }
+    ],
+    "2. Data_Loader: all file I/O with provenance (`src/canalcast/loader.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863642157
+      }
+    ],
+    "2.4 Write loader unit tests": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863650913
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863847944
+      }
+    ],
+    "4. Pure calculation functions (`src/canalcast/calculations.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864089870
+      }
+    ],
+    "5. Result structures (`src/canalcast/results.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864090977
+      }
+    ],
+    "6. Route comparison and selection (`src/canalcast/comparison.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864456357
+      }
+    ],
+    "7. Deterministic explanation (`src/canalcast/explain.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864457504
+      }
+    ],
+    "8.1 Write the no-I/O boundary test (`test_no_io_boundary.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864462918
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864739293
+      }
+    ],
+    "8.2 Write worked-example and edge-case unit tests (`test_calculations.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864464311
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864740645
+      }
+    ],
+    "8.3 Write calculation property tests (`test_calculations.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864465728
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864741647
+      }
+    ],
+    "8.4 Write comparison and selection property tests (`test_comparison.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864466404
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864742557
+      }
+    ],
+    "8. Core test suite (`src/tests/`) — must pass before any UI code (Req 19.1, 19.2)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864739342
+      }
+    ],
+    "10. Streamlit presets and controls (`src/canalcast/ui/controls.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865010198
+      }
+    ],
+    "11. Streamlit results, disclosure, and charts (`src/canalcast/ui/views.py`, `src/canalcast/ui/charts.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865182177
+      }
+    ],
+    "12. Wire the Streamlit app (`app.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865400697
+      }
+    ],
+    "13. Deployment artifacts and instructions": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865524765
+      }
+    ],
+    "14.1 Extend `Scenario` and add a `DraftLoss` result type": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866751116
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866883760
+      }
+    ],
+    "14.2 Implement the pure `draft_cargo_loss` function (`calculations.py`)": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866886422
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866987089
+      }
+    ],
+    "14.3 Integrate draft loss into `compute_option` (`comparison.py`) and `OptionResult`": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792866990773
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867171103
+      }
+    ],
+    "14.4 Tests: default-off regression + draft-loss worked example and properties": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867174679
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867311034
+      }
+    ],
+    "14.5 UI: draft-loss toggle, slider, and disclosure (`controls.py`, `views.py`)": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867314602
+      },
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867593787
+      }
+    ],
+    "14. Version 2 — optional draft-based cargo-loss modeling (Requirement 20)": [
+      {
+        "executionId": "4ed81ff1-a88b-48a5-88b6-971387332816",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792867593909
+      }
+    ]
+  }
+}
