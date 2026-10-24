@@ -97,7 +97,7 @@ def _make_scenario(
     deadline_h: float | None,
     priority: str,
     suez_available: bool,
-    canal_duration_h: float = 12.0,
+    canal_duration_h: float = 0.0,
     waiting_duration_h: float = 0.0,
     load_factor: float = 0.85,
     bunker_price_usd_per_t: float = 876.5,

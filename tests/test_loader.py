@@ -15,8 +15,13 @@ These cover the loader's branch behavior with small, synthetic CSVs written into
   (Requirements 4.2, 4.3).
 * ``load_all`` over the real ``data/`` folder returns the expected
   :class:`LoadResult`.
+* Source trust status (Task 15.5) — the explicit status mapping is applied with
+  the raw status retained, unknown/missing statuses in required files are
+  rejected naming the record and value, an optional series with an unknown or
+  missing status is unavailable with a reason, and nothing defaults to
+  ``sourced``.
 
-Requirements: 1.8, 1.9, 2.3, 2.4, 4.2, 4.3.
+Requirements: 1.8, 1.9, 2.2, 2.3, 2.4, 2.5, 4.2, 4.3.
 """
 
 from __future__ import annotations
@@ -26,13 +31,14 @@ from pathlib import Path
 import pytest
 
 from src.canalcast.loader import (
+    SOURCE_STATUS_MAPPING,
     LoaderError,
     ValidationError,
     load_all,
     load_optional,
     load_required,
 )
-from src.canalcast.models import Status
+from src.canalcast.models import ProvenancedValue, RequiredData, Status
 
 # The real data directory, resolved relative to the workspace root. Used only
 # for read-only "available" / load_all assertions; never written to.
@@ -363,3 +369,207 @@ def test_load_all_real_data_has_three_od_pairs_and_all_series() -> None:
     for name, record in result.optional.items():
         assert record.available is True, f"{name} should be available"
         assert record.reason is None
+
+
+# --- 5. Source trust status (Task 15.5; Requirements 2.2, 2.3, 2.5) ---------
+
+
+def _required_provenance(required: RequiredData) -> list[ProvenancedValue]:
+    """Every ProvenancedValue built from the required CSVs."""
+    constants = required.constants
+    values: list[ProvenancedValue] = [
+        constants.ship_capacity_teu,
+        constants.load_factor,
+        constants.default_speed_kn,
+        constants.base_speed_kn,
+        constants.base_fuel_t_per_day,
+        constants.speed_exponent,
+        constants.bunker_price_usd_per_t,
+        constants.reference_draft_ft,
+        constants.canal_wait_days_default,
+        *constants.context.values(),
+    ]
+    for pair in required.od_pairs:
+        for option in (pair.panama, pair.suez):
+            if option is not None:
+                values.append(option.provenance)
+                if option.distance_nm is not None:
+                    values.append(option.distance_nm)
+    for state in required.canal_states:
+        values.extend((state.max_draft_ft, state.daily_slots, state.provenance))
+    values.extend(unit.provenance for unit in required.container_units)
+    values.extend(factor.co2_t_per_fuel_t for factor in required.emission_factors)
+    return values
+
+
+def test_status_mapping_is_explicit_and_never_upgrades_trust() -> None:
+    """Canonical statuses map to themselves; the two CSV extras map down."""
+    assert dict(SOURCE_STATUS_MAPPING) == {
+        "sourced": Status.SOURCED,
+        "approximate": Status.APPROXIMATE,
+        "assumption": Status.ASSUMPTION,
+        "derived": Status.DERIVED,
+        "secondary_source": Status.APPROXIMATE,
+        "analyst_estimate": Status.ASSUMPTION,
+    }
+    # Only the literal "sourced" may resolve to SOURCED.
+    assert [raw for raw, s in SOURCE_STATUS_MAPPING.items() if s is Status.SOURCED] == [
+        "sourced"
+    ]
+
+
+def test_real_data_maps_statuses_and_retains_raw_status() -> None:
+    """The real CSVs load unchanged; mapped statuses keep the raw string."""
+    constants = load_required(DATA_DIR).constants
+
+    # Computational key: secondary_source -> approximate.
+    assert constants.base_speed_kn.status is Status.APPROXIMATE
+    assert constants.base_speed_kn.source_status == "secondary_source"
+    # Context key: analyst_estimate -> assumption (previously coerced upward).
+    draft_slope = constants.context["containers_lost_per_10cm_draft_cut"]
+    assert draft_slope.status is Status.ASSUMPTION
+    assert draft_slope.source_status == "analyst_estimate"
+    # Context secondary_source rows use the same mapping.
+    assert constants.context["base_fuel_t_per_day_low"].status is Status.APPROXIMATE
+    assert constants.context["base_fuel_t_per_day_low"].source_status == "secondary_source"
+    # Canonical statuses map to themselves and are retained verbatim.
+    assert constants.bunker_price_usd_per_t.status is Status.SOURCED
+    assert constants.bunker_price_usd_per_t.source_status == "sourced"
+
+
+def test_nothing_defaults_to_sourced_in_real_data() -> None:
+    """Every loaded value retains its raw status, and SOURCED means 'sourced'."""
+    result = load_all(DATA_DIR)
+
+    values = _required_provenance(result.required)
+    values.extend(
+        series.provenance
+        for series in result.optional.values()
+        if series.provenance is not None
+    )
+    assert values
+    for pv in values:
+        assert pv.source_status is not None, pv
+        assert SOURCE_STATUS_MAPPING[pv.source_status] is pv.status
+        if pv.status is Status.SOURCED:
+            assert pv.source_status == "sourced"
+
+
+def test_analyst_estimate_on_computational_constant_maps_to_assumption(
+    tmp_path: Path,
+) -> None:
+    """A mapped status on a typed core field loads with the raw value retained."""
+    write_valid_required(tmp_path)
+    _write_csv(
+        tmp_path / "constants.csv",
+        "key,value,unit,source,status,notes",
+        _constants_rows_with("load_factor", status="analyst_estimate"),
+    )
+
+    load_factor = load_required(tmp_path).constants.load_factor
+    assert load_factor.status is Status.ASSUMPTION
+    assert load_factor.source_status == "analyst_estimate"
+
+
+@pytest.mark.parametrize(
+    ("raw_status", "expected_detail"),
+    [("bogus", "unrecognized status value 'bogus'"), ("", "status field is missing")],
+)
+def test_context_constant_bad_status_rejected(
+    tmp_path: Path, raw_status: str, expected_detail: str
+) -> None:
+    """A context constant with an unknown/missing status is rejected, not coerced."""
+    write_valid_required(tmp_path)
+    _write_csv(
+        tmp_path / "constants.csv",
+        "key,value,unit,source,status,notes",
+        _VALID_CONSTANTS_ROWS
+        + (("panamax_locks_capacity_per_day", "34-36", "lockages/day", "ACP", raw_status, ""),),
+    )
+
+    with pytest.raises(LoaderError) as excinfo:
+        load_required(tmp_path)
+    err = _find_error(excinfo.value, field="status")
+    assert err.record_id == "constants[panamax_locks_capacity_per_day]"
+    assert err.detail == expected_detail
+    assert err.record_id in str(excinfo.value)
+
+
+def test_unknown_status_in_other_required_file_rejected(tmp_path: Path) -> None:
+    """The mapping is enforced outside constants.csv too (route rows)."""
+    write_valid_required(tmp_path)
+    routes = (tmp_path / "routes.csv").read_text(encoding="utf-8")
+    (tmp_path / "routes.csv").write_text(
+        routes.replace("searoute,approximate", "searoute,guesswork", 1),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(LoaderError) as excinfo:
+        load_required(tmp_path)
+    err = _find_error(excinfo.value, field="status")
+    assert err.record_id.startswith("routes[r1:panama]")
+    assert "guesswork" in err.detail
+
+
+_ONI_HEADER = "month,oni,unit,source,status,retrieved_on"
+
+
+@pytest.mark.parametrize(
+    ("statuses", "expected_reason"),
+    [
+        (("sourced", "bogus"), "unrecognized status value 'bogus'"),
+        (("sourced", ""), "status field is missing on 1 row(s)"),
+    ],
+)
+def test_optional_series_bad_status_is_unavailable(
+    tmp_path: Path, statuses: tuple[str, str], expected_reason: str
+) -> None:
+    """An unknown/missing status makes the series unavailable; no raise."""
+    _write_csv(
+        tmp_path / "oni.csv",
+        _ONI_HEADER,
+        tuple(
+            (f"2026-0{i + 1}", "0.1", "degC", "https://noaa.gov", status, "2026-10-24")
+            for i, status in enumerate(statuses)
+        ),
+    )
+
+    series = load_optional(tmp_path)
+
+    oni = series["oni"]
+    assert oni.available is False
+    assert oni.reason == expected_reason
+    assert oni.rows == ()
+    assert oni.provenance is None
+    # The remaining series are unaffected and loading continued.
+    assert series["roni"].reason == "not found"
+
+
+def test_optional_series_without_status_column_is_unavailable(tmp_path: Path) -> None:
+    """A series with no status column is never assumed to be sourced."""
+    _write_csv(
+        tmp_path / "oni.csv",
+        "month,oni,unit,source",
+        (("2026-01", "0.1", "degC", "https://noaa.gov"),),
+    )
+
+    oni = load_optional(tmp_path)["oni"]
+    assert oni.available is False
+    assert oni.reason == "status field is missing"
+
+
+def test_optional_series_mapped_status_keeps_raw_status(tmp_path: Path) -> None:
+    """A secondary_source series maps to approximate, not sourced."""
+    _write_csv(
+        tmp_path / "oni.csv",
+        _ONI_HEADER,
+        (("2026-01", "0.1", "degC", "https://example.org", "secondary_source", "2026-10-24"),),
+    )
+
+    oni = load_optional(tmp_path)["oni"]
+    assert oni.available is True
+    assert oni.provenance is not None
+    assert oni.provenance.status is Status.APPROXIMATE
+    assert oni.provenance.source_status == "secondary_source"
+    # Rows are carried verbatim, including the raw status.
+    assert oni.rows[0]["status"] == "secondary_source"

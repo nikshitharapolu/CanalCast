@@ -92,6 +92,8 @@ HOURS_PER_DAY: float = 24.0
 # seeded from the loaded ``containers_lost_per_10cm_draft_cut`` constant when
 # available, falling back to this analyst-estimate default.
 CONTAINERS_LOST_PER_10CM_DEFAULT: float = 100.0
+#: Task 15.3: draft-loss modeling is a dormant v2 feature, off in the MVP UI.
+MVP_DRAFT_LOSS_ENABLED: bool = False
 CONTAINERS_LOST_PER_10CM_MIN: float = 0.0
 CONTAINERS_LOST_PER_10CM_MAX: float = 500.0
 CONTAINERS_LOST_PER_10CM_STEP: float = 10.0
@@ -686,11 +688,14 @@ def render_scenario_controls(
         help="Time attributed to transiting the canal, in hours.",
     )
     waiting_days = st.number_input(
-        "Waiting duration (days)",
+        "Panama waiting time (days)",
         min_value=WAITING_DAYS_MIN,
         value=0.0,
         step=0.5,
-        help="Explicit waiting time in days; defaults to 0. Never inferred from slots.",
+        help=(
+            "Applies only to the Panama route; Suez waiting isn't modeled. "
+            "An explicit input, never inferred from booking slots."
+        ),
     )
     deadline_days = st.number_input(
         "Deadline (days)",
@@ -755,13 +760,12 @@ def render_scenario_controls(
             "draft and booking-slot inputs."
         )
 
-    # Optional draft-based cargo-loss controls (Requirement 20.11). When the
-    # toggle is off these are the no-loss defaults, so the Scenario matches v1.
-    (
-        draft_loss_enabled,
-        containers_lost_per_10cm,
-        avg_teu_per_container,
-    ) = render_draft_loss_controls(load_result)
+    # Task 15.3: the MVP treats draft as context only, so the v2 draft-loss
+    # controls (render_draft_loss_controls) are not shown. These are the no-loss
+    # defaults, so the Scenario matches v1 exactly.
+    draft_loss_enabled = MVP_DRAFT_LOSS_ENABLED
+    containers_lost_per_10cm = None
+    avg_teu_per_container = AVG_TEU_PER_CONTAINER_DEFAULT
 
     return ControlReadings(
         od_pair=selected_pair,

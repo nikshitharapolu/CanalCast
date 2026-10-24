@@ -13,10 +13,15 @@ Tasks implemented here:
   :class:`LoaderError` naming the file and produces no partial data
   (Requirement 1.1, 1.2, 1.4, 1.8).
 * **2.2** provenance validation on every Model_Input as records are built:
-  reject records missing value/unit/rationale/status; reject a status outside
-  the four-value vocabulary for typed core fields; reject a ``derived`` record
-  lacking ``derived_from``/``method`` (Requirement 1.5, 1.9, 2.3, 2.4, 2.5,
-  2.6).
+  reject records missing value/unit/rationale/status; reject a ``derived``
+  record lacking ``derived_from``/``method`` (Requirement 1.5, 1.9, 2.3, 2.4,
+  2.5, 2.6).
+* **15.5** source trust status: every raw CSV status resolves to a canonical
+  :class:`~canalcast.models.Status` only through the explicit
+  :data:`SOURCE_STATUS_MAPPING`, with the raw string retained in
+  ``ProvenancedValue.source_status``. A status outside the mapping is never
+  defaulted or coerced: a required record is rejected naming the record and
+  the value; an optional series is marked unavailable naming the value.
 
 * **2.3** ``load_optional`` — attempt to read each optional historical series
   read-only and record it as available (retaining provenance) or unavailable
@@ -30,7 +35,8 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 import pandas as pd
 
@@ -50,6 +56,7 @@ from .models import (
 
 __all__ = [
     "LoaderError",
+    "SOURCE_STATUS_MAPPING",
     "ValidationError",
     "load_required",
     "load_optional",
@@ -109,16 +116,33 @@ class ValidationError(Exception):
 
 # --- Status vocabulary -----------------------------------------------------
 
-#: The four statuses permitted on a typed core Model_Input (Requirement 2.2).
-_CORE_STATUSES = {s.value for s in Status}
-
-#: Non-core CSV status strings that are mapped to the closest valid
-#: :class:`Status` for *typed computational* fields, with the original string
-#: preserved in the ``method`` note. Context-only keys keep their raw string.
-_STATUS_ALIASES = {
-    "secondary_source": Status.APPROXIMATE,
-    "analyst_estimate": Status.APPROXIMATE,
-}
+#: The ONE explicit mapping from a raw CSV ``status`` string to its canonical
+#: :class:`Status` (Requirements 2.2, 2.3). It is applied identically to every
+#: record the loader builds: computational constants, context constants, routes,
+#: canal states, container units, emission factors, and optional series.
+#:
+#: * The four canonical statuses map to themselves.
+#: * ``secondary_source`` -> ``approximate``: a figure relayed by a secondary
+#:   publication is not treated as primary ``sourced`` data.
+#: * ``analyst_estimate`` -> ``assumption``: an analyst's judgment figure is
+#:   carried as an assumption.
+#:
+#: The mapping is conservative and never upgrades trust: only the literal
+#: ``"sourced"`` resolves to :attr:`Status.SOURCED`. The raw string is always
+#: retained in :attr:`ProvenancedValue.source_status`. Any status not listed
+#: here (and any missing status) is NEVER defaulted or coerced: a required
+#: record is rejected naming the record and the value, and an optional series
+#: is marked unavailable with a reason naming the value.
+SOURCE_STATUS_MAPPING: Mapping[str, Status] = MappingProxyType(
+    {
+        Status.SOURCED.value: Status.SOURCED,
+        Status.APPROXIMATE.value: Status.APPROXIMATE,
+        Status.ASSUMPTION.value: Status.ASSUMPTION,
+        Status.DERIVED.value: Status.DERIVED,
+        "secondary_source": Status.APPROXIMATE,
+        "analyst_estimate": Status.ASSUMPTION,
+    }
+)
 
 
 # --- Small CSV helpers -----------------------------------------------------
@@ -187,35 +211,29 @@ def _parse_float(value: str) -> float | None:
 # --- Provenance validation (Task 2.2) --------------------------------------
 
 
-def _resolve_status(
-    record_id: str,
-    raw_status: str,
-    *,
-    strict: bool,
-) -> tuple[Status, str | None]:
-    """Resolve a raw CSV status string to a :class:`Status`.
+def _resolve_status(record_id: str, raw_status: Any) -> tuple[Status, str]:
+    """Resolve a raw CSV status string through :data:`SOURCE_STATUS_MAPPING`.
 
-    For typed core fields (``strict=True``) a status must be one of the four
-    allowed values, or a known alias mapped to the closest valid status (with
-    the original string returned as a note). An unrecognized, unmappable status
-    is rejected with a :class:`ValidationError` naming the record and the
-    offending value (Requirement 2.3).
+    A missing status is rejected (Requirement 2.5) and a status absent from the
+    mapping is rejected naming the record and the unrecognized value
+    (Requirement 2.3). Nothing is ever defaulted or coerced.
 
     Returns:
-        A ``(status, note)`` pair where ``note`` records the original string
-        when an alias mapping was applied, else ``None``.
+        A ``(status, source_status)`` pair: the canonical :class:`Status` and
+        the trimmed raw string to retain as ``source_status``.
+
+    Raises:
+        ValidationError: On a missing or unrecognized status.
     """
     text = _clean(raw_status)
     if not text:
         raise ValidationError(record_id, "status", "status field is missing")
-    if text in _CORE_STATUSES:
-        return Status(text), None
-    if strict and text in _STATUS_ALIASES:
-        mapped = _STATUS_ALIASES[text]
-        return mapped, f"original status '{text}' mapped to '{mapped.value}'"
-    raise ValidationError(
-        record_id, "status", f"unrecognized status value '{text}'"
-    )
+    status = SOURCE_STATUS_MAPPING.get(text)
+    if status is None:
+        raise ValidationError(
+            record_id, "status", f"unrecognized status value '{text}'"
+        )
+    return status, text
 
 
 def _make_provenanced(
@@ -229,7 +247,6 @@ def _make_provenanced(
     method: str | None = None,
     derived_from: tuple[str, ...] = (),
     derivation: str | None = None,
-    strict_status: bool = True,
 ) -> ProvenancedValue:
     """Build a validated :class:`ProvenancedValue`, enforcing every rule.
 
@@ -242,7 +259,8 @@ def _make_provenanced(
         * ``value`` present (non-empty) — Requirement 2.6.
         * ``unit`` present — Requirement 2.6.
         * ``rationale`` (source/assumption) present — Requirement 2.6.
-        * ``status`` present and valid for the field — Requirement 2.3, 2.5.
+        * ``status`` present and listed in :data:`SOURCE_STATUS_MAPPING`; the
+          raw string is kept in ``source_status`` — Requirement 2.3, 2.5.
         * ``derived`` status requires non-empty ``derived_from`` AND a non-empty
           derivation/method — Requirement 2.4.
     """
@@ -259,16 +277,9 @@ def _make_provenanced(
             record_id, "rationale", "source or assumption rationale is missing"
         )
 
-    status, alias_note = _resolve_status(
-        record_id, raw_status, strict=strict_status
-    )
+    status, source_status = _resolve_status(record_id, raw_status)
 
-    # Merge any alias note into the method so the original string is retained.
     method_text = _clean(method) if method is not None else ""
-    if alias_note:
-        method_text = (
-            f"{method_text}; {alias_note}" if method_text else alias_note
-        )
     final_method = method_text or None
 
     if status is Status.DERIVED:
@@ -294,6 +305,7 @@ def _make_provenanced(
         method=final_method,
         derived_from=tuple(derived_from),
         derivation=derivation,
+        source_status=source_status,
     )
 
 
@@ -426,11 +438,11 @@ def _build_constants(
     """Build the typed :class:`Constants` from constants.csv.
 
     Only the computational keys in :data:`_COMPUTATIONAL_KEYS` are parsed to
-    float and validated strictly (status must resolve to the four-value
-    vocabulary, aliases permitted). Range/context keys (e.g. ``"34-36"``) and
-    all other rows are kept permissively as ``str`` context values and are NOT
-    subject to the strict status rule. ``containers_lost_per_10cm_draft_cut``
-    goes to context only (Requirement 10.2).
+    float. Range/context keys (e.g. ``"34-36"``) and all other rows are kept as
+    ``str`` context values. Every row, computational or context, resolves its
+    status through :data:`SOURCE_STATUS_MAPPING`; a missing or unrecognized
+    status is rejected. ``containers_lost_per_10cm_draft_cut`` goes to context
+    only (Requirement 10.2).
     """
     computational: dict[str, ProvenancedValue] = {}
     context: dict[str, ProvenancedValue] = {}
@@ -464,7 +476,7 @@ def _build_constants(
             # derivation from the source/notes so it satisfies Requirement 2.4.
             derived_from: tuple[str, ...] = ()
             derivation: str | None = None
-            if _clean(raw_status) == Status.DERIVED.value:
+            if SOURCE_STATUS_MAPPING.get(_clean(raw_status)) is Status.DERIVED:
                 derived_from = ("base_fuel_t_per_day", "base_speed_kn")
                 derivation = _clean(rationale) or notes or None
             try:
@@ -477,15 +489,14 @@ def _build_constants(
                     method=notes or None,
                     derived_from=derived_from,
                     derivation=derivation,
-                    strict_status=True,
                 )
             except ValidationError as err:
                 errors.append(err)
         else:
-            # Context-only key: permissive. Keep raw string value; don't enforce
-            # the four-value status rule. Still require value/unit/rationale to
-            # be present so the record is meaningfully provenanced.
-            context[key] = _make_context_value(
+            # Context-only key: keep the raw string value (ranges such as
+            # "34-36" are never coerced), but resolve its status through the
+            # same mapping as every other record.
+            context_value = _make_context_value(
                 record_id,
                 raw_value=raw_value,
                 unit=unit,
@@ -494,6 +505,8 @@ def _build_constants(
                 notes=notes,
                 errors=errors,
             )
+            if context_value is not None:
+                context[key] = context_value
 
     if errors:
         # Defer raising until all constants validated so the caller can report
@@ -533,40 +546,41 @@ def _make_context_value(
     raw_status: Any,
     notes: str,
     errors: list[ValidationError],
-) -> ProvenancedValue:
-    """Build a permissive context :class:`ProvenancedValue` (non-core key).
+) -> ProvenancedValue | None:
+    """Build a context :class:`ProvenancedValue` (non-computational key).
 
-    Context keys are exempt from the four-value status rule: a non-core status
-    string is retained verbatim as a note and the status is recorded as
-    ``approximate`` so the typed field is well-formed. Value/unit/rationale must
-    still be present (Requirement 2.6); a missing one is collected as an error.
+    The value stays a raw string (never parsed to float). Value, unit, and
+    rationale must be present (Requirement 2.6), and the status resolves
+    through :data:`SOURCE_STATUS_MAPPING` exactly as for computational keys: a
+    missing or unrecognized status is rejected, never coerced (Requirements
+    2.3, 2.5). Every problem is collected into ``errors``; ``None`` is returned
+    when any was found so no partially valid record is built.
     """
-    status_text = _clean(raw_status)
-    if status_text in _CORE_STATUSES:
-        status = Status(status_text)
-        method = notes or None
-    else:
-        status = Status.APPROXIMATE
-        note = f"context status '{status_text or 'absent'}'"
-        method = f"{notes}; {note}" if notes else note
-
+    found: list[ValidationError] = []
     unit_text = _clean(unit)
     rationale_text = _clean(rationale)
     if not raw_value:
-        errors.append(ValidationError(record_id, "value", "value field is missing"))
+        found.append(ValidationError(record_id, "value", "value field is missing"))
     if not unit_text:
-        errors.append(ValidationError(record_id, "unit", "unit field is missing"))
+        found.append(ValidationError(record_id, "unit", "unit field is missing"))
     if not rationale_text:
-        errors.append(
-            ValidationError(record_id, "rationale", "rationale is missing")
-        )
+        found.append(ValidationError(record_id, "rationale", "rationale is missing"))
+    try:
+        status, source_status = _resolve_status(record_id, raw_status)
+    except ValidationError as err:
+        found.append(err)
+
+    if found:
+        errors.extend(found)
+        return None
 
     return ProvenancedValue(
         value=raw_value,
         unit=unit_text,
         rationale=rationale_text,
         status=status,
-        method=method,
+        method=notes or None,
+        source_status=source_status,
     )
 
 
@@ -839,18 +853,47 @@ def _series_provenance(name: str, frame: pd.DataFrame) -> ProvenancedValue | Non
     if not source:
         return None
 
-    status = Status(raw_status) if raw_status in _CORE_STATUSES else Status.SOURCED
-    note = None if raw_status in _CORE_STATUSES else (
-        f"series status '{raw_status}'" if raw_status else None
-    )
+    # The caller has already confirmed via _series_status_problem that every
+    # row's status is present and mapped, so this lookup cannot fail.
     return ProvenancedValue(
         value=name,
         unit="series",
         rationale=source,
-        status=status,
+        status=SOURCE_STATUS_MAPPING[raw_status],
         retrieved_on=_parse_date(retrieved),
-        method=note,
+        source_status=raw_status,
     )
+
+
+def _series_status_problem(frame: pd.DataFrame) -> str | None:
+    """Explain why a series' statuses cannot be trusted, or ``None`` if they can.
+
+    Every row's status must be present and listed in
+    :data:`SOURCE_STATUS_MAPPING`. A series that has no ``status`` column, a row
+    with a blank status, or a row with an unrecognized status is reported so the
+    caller can mark the whole series unavailable. Nothing defaults to
+    ``sourced``. The returned reason names each unrecognized value.
+    """
+    if "status" not in frame.columns:
+        return "status field is missing"
+
+    unrecognized: list[str] = []
+    missing_rows = 0
+    for raw in frame["status"]:
+        text = _clean(raw)
+        if not text:
+            missing_rows += 1
+        elif text not in SOURCE_STATUS_MAPPING and text not in unrecognized:
+            unrecognized.append(text)
+
+    problems: list[str] = []
+    if unrecognized:
+        listed = ", ".join(f"'{value}'" for value in unrecognized)
+        noun = "value" if len(unrecognized) == 1 else "values"
+        problems.append(f"unrecognized status {noun} {listed}")
+    if missing_rows:
+        problems.append(f"status field is missing on {missing_rows} row(s)")
+    return "; ".join(problems) or None
 
 
 def _rows_of(frame: pd.DataFrame) -> tuple[dict[str, object], ...]:
@@ -882,6 +925,10 @@ def load_optional(data_dir: Path) -> dict[str, OptionalSeries]:
       (Requirement 4.2).
     * Present but unreadable (parse error / empty): ``available=False``,
       ``reason="could not be read"``, ``rows=()`` (Requirement 4.3).
+    * Present but with a missing or unrecognized status (no ``status`` column,
+      a blank status, or a value outside :data:`SOURCE_STATUS_MAPPING`):
+      ``available=False``, ``reason`` names the status problem, ``rows=()``
+      (Requirements 2.3, 2.5). The status is never defaulted to ``sourced``.
 
     Args:
         data_dir: Directory holding the optional CSV files (typically
@@ -914,6 +961,18 @@ def load_optional(data_dir: Path) -> dict[str, OptionalSeries]:
                 name=name,
                 available=False,
                 reason="not found",
+                rows=(),
+            )
+            continue
+
+        status_problem = _series_status_problem(frame)
+        if status_problem is not None:
+            # Missing or unrecognized status: never default it to "sourced";
+            # record the series unavailable, naming the status, and continue.
+            result[name] = OptionalSeries(
+                name=name,
+                available=False,
+                reason=status_problem,
                 rows=(),
             )
             continue

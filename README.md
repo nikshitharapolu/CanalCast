@@ -91,9 +91,10 @@ The entry point is **`app.py`**. A standard Streamlit deployment runs:
 streamlit run app.py
 ```
 
-For **Streamlit Community Cloud**, point the app at `app.py` as the main file
-and use `requirements.txt` as the dependency file. CanalCast v1 is intended to
-run locally and is **not exposed publicly by default** (Req 19.3).
+CanalCast v1 runs **locally only** (Req 19.3): `.streamlit/config.toml` binds the
+server to `localhost`. Hosted deployment, including Streamlit Community Cloud,
+is out of scope for v1 because it creates a public endpoint. Adding it later
+needs its own access-control decision.
 
 ## Data & provenance
 
@@ -145,8 +146,16 @@ Defaults: 100 containers per 10 cm (analyst estimate) and 1.7 TEU per container
   explicit input.
 - **Historical ONI/RONI charts are context only.** They do not change with the
   route or scenario, and historical replay is not model validation.
-- **UI is smoke- and example-tested**, not property-tested.
+- **Waiting time applies only to Panama.** Suez waiting isn't modeled, and the
+  Suez result says so.
+- **Canal and waiting fuel rates aren't in the data.** With a positive canal or
+  Panama waiting time, voyage fuel cost and CO₂ show as unavailable, next to a
+  clearly labeled sailing-only estimate that is never used to pick a route.
+- **The UI has focused rendered tests** (Streamlit `AppTest`) for key labels and
+  states; it isn't property-tested.
 
 ## Verified environments
 
 Tests and the app were run on Python 3.11.9 with the pinned `requirements.txt`.
+The October 2026 review fixes were verified on Python 3.13.2; re-run the tests on
+Python 3.11 before release.

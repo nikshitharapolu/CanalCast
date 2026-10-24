@@ -201,7 +201,7 @@ def render_oni_roni_chart(source: LoadResult | Mapping[str, OptionalSeries]) -> 
     )
 
     st.subheader(_CHART_TITLE)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # Req 16.2: name any series omitted because it was unavailable, inside the
     # same chart view, without erroring on the series that did render.

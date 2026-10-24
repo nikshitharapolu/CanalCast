@@ -95,7 +95,7 @@ def _make_scenario(
         speed_kn=speed_kn,
         load_factor=load_factor,
         bunker_price_usd_per_t=876.5,
-        canal_duration_h=12.0,
+        canal_duration_h=0.0,
         waiting_duration_h=0.0,
         deadline_h=None,
         suez_available=True,

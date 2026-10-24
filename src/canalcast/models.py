@@ -50,6 +50,11 @@ class ProvenancedValue:
             validation is enforced by the Data_Loader, not here.
         derivation: Human-readable derivation. Required to be non-empty WHEN
             ``status == Status.DERIVED`` (Requirement 2.4).
+        source_status: The raw status string exactly as it appeared in the
+            source CSV (whitespace-trimmed), kept alongside the canonical
+            ``status`` so an explicitly mapped status (e.g. ``secondary_source``
+            → ``approximate``) stays traceable. ``None`` for values that were
+            not loaded from a CSV.
     """
 
     value: float | str
@@ -60,6 +65,7 @@ class ProvenancedValue:
     method: str | None = None
     derived_from: tuple[str, ...] = field(default_factory=tuple)
     derivation: str | None = None
+    source_status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +94,21 @@ class Unavailable:
 # computed value of type ``T`` or an :class:`Unavailable` explaining why it
 # could not (design "The missing/unavailable pattern").
 ResultOrUnavailable = Union[T, Unavailable]
+
+
+@dataclass(frozen=True)
+class NotModeled:
+    """A quantity outside the v1 model, as opposed to one with missing inputs.
+
+    Used only for Suez waiting time and waiting fuel (Requirements 6.13, 7.7).
+    It is never shown as ``0`` and never counted or named as an unavailable
+    input.
+
+    Attributes:
+        reason: Why the quantity is outside the model.
+    """
+
+    reason: str
 
 
 @dataclass(frozen=True)

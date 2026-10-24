@@ -30,8 +30,8 @@ This document uses the following status vocabulary for model inputs, drawn direc
 - **Canal_State**: A named Panama Canal operating condition consisting of a maximum draft in feet and a daily booking-slot count, drawn from `canal_states.csv`.
 - **Sailing_Time**: Time spent sailing, computed as distance in nautical miles divided by speed in knots.
 - **Canal_Duration**: Time attributed to transiting the canal, supplied as an explicit scenario input separate from Sailing_Time.
-- **Waiting_Duration**: Time spent waiting for canal access, supplied as an explicit scenario input separate from Sailing_Time and Canal_Duration.
-- **Journey_Time**: Sailing_Time plus Canal_Duration plus Waiting_Duration for a Route_Option.
+- **Waiting_Duration**: Time spent waiting for Panama Canal access, supplied as an explicit scenario input separate from Sailing_Time and Canal_Duration, and applied only to the Panama Route_Option. Suez waiting time is not modeled.
+- **Journey_Time**: For the Panama Route_Option, Sailing_Time plus Canal_Duration plus Waiting_Duration; for the Suez Route_Option, Sailing_Time plus Canal_Duration.
 - **Cubic_Fuel_Curve**: The single speed-to-fuel relationship fuel_t_per_day = base_fuel_t_per_day multiplied by (speed_kn divided by base_speed_kn) raised to the speed_exponent, with speed_exponent equal to 3.
 - **Sailing_Fuel**: Fuel consumed while sailing, derived from the Cubic_Fuel_Curve and Sailing_Time.
 - **Emission_Factor**: Tank-to-wake carbon dioxide produced per tonne of fuel burned, in tonnes of carbon dioxide per tonne of fuel, for a specific fuel type.
@@ -107,18 +107,23 @@ This document uses the following status vocabulary for model inputs, drawn direc
 
 ### Requirement 6: Compute journey time from separate sailing, canal, and waiting durations
 
-**User Story:** As a user, I want journey time built from separately identified sailing, canal, and waiting durations, so that waiting is never silently inferred from booking slots.
+**User Story:** As a user, I want journey time built from separately identified sailing, canal, and waiting durations, with waiting applied only to the Panama route, so that a Panama restriction scenario can change the comparison and waiting is never silently inferred from booking slots.
 
 #### Acceptance Criteria
 
-1. WHEN a Route_Option has a distance greater than zero nautical miles and a speed greater than zero knots, THE Calculation_Core SHALL compute Sailing_Time in hours as the distance in nautical miles divided by the speed in knots.
+1. WHEN the Calculation_Core evaluates a Route_Option whose distance is a finite number greater than zero nautical miles and the speed input is a finite number greater than zero knots, THE Calculation_Core SHALL compute Sailing_Time in hours for that Route_Option as the distance in nautical miles divided by the speed in knots.
 2. THE Calculation_Core SHALL accept Canal_Duration in hours and Waiting_Duration in hours as explicit scenario inputs that are separate from each other and from Sailing_Time.
 3. THE Calculation_Core SHALL derive Waiting_Duration only from its explicit Waiting_Duration scenario input.
-4. THE Calculation_Core SHALL NOT use a Booking_Slot_Limit as a source for Waiting_Duration.
-5. WHEN Sailing_Time, Canal_Duration, and Waiting_Duration are all present and each is greater than or equal to zero hours, THE Calculation_Core SHALL compute Journey_Time as their sum in hours.
-6. IF a Route_Option distance is missing, THEN THE Calculation_Core SHALL disable the Journey_Time calculation for that Route_Option, leave the distance missing without substituting a value, and report the missing distance.
-7. IF a speed input is less than or equal to zero knots, THEN THE Calculation_Core SHALL reject the Sailing_Time calculation, leave Sailing_Time missing without substituting a value, and report the invalid speed.
-8. IF Canal_Duration or Waiting_Duration is missing or less than zero hours, THEN THE Calculation_Core SHALL disable the Journey_Time calculation and report which duration is missing or invalid.
+4. THE Calculation_Core SHALL NOT use a Booking_Slot_Limit as a source for Waiting_Duration, whether the Waiting_Duration scenario input is present, missing, or invalid.
+5. THE Calculation_Core SHALL use Waiting_Duration only in calculations for the Panama Route_Option and SHALL NOT use Waiting_Duration in any calculation for the Suez Route_Option.
+6. WHEN the Calculation_Core evaluates the Suez Route_Option with its Sailing_Time and the Canal_Duration each present, finite, and greater than or equal to zero hours, THE Calculation_Core SHALL compute the Suez Route_Option Journey_Time in hours as Sailing_Time plus Canal_Duration, without Waiting_Duration, whether the Waiting_Duration scenario input is present, missing, or invalid.
+7. WHEN the Calculation_Core evaluates the Panama Route_Option with its Sailing_Time, the Canal_Duration, and the Waiting_Duration each present, finite, and greater than or equal to zero hours, THE Calculation_Core SHALL compute the Panama Route_Option Journey_Time in hours as Sailing_Time plus Canal_Duration plus Waiting_Duration.
+8. IF a Route_Option distance is missing, is not a finite number, or is less than or equal to zero nautical miles, THEN THE Calculation_Core SHALL disable the Sailing_Time and Journey_Time calculations for that Route_Option, substitute no default, zero, or other value for the distance or for Sailing_Time, and report the missing or invalid distance, without disabling the Journey_Time calculation of the other Route_Option.
+9. IF the speed input is missing, is not a finite number, or is less than or equal to zero knots, THEN THE Calculation_Core SHALL reject the Sailing_Time calculation and disable the Journey_Time calculation for both the Panama Route_Option and the Suez Route_Option, substitute no default, zero, or other value for the speed or for Sailing_Time, and report the missing or invalid speed.
+10. IF Canal_Duration is missing, is not a finite number, or is less than zero hours, THEN THE Calculation_Core SHALL disable the Journey_Time calculation for both the Panama Route_Option and the Suez Route_Option, substitute no default, zero, or other value for Canal_Duration, and report the missing or invalid Canal_Duration.
+11. IF Waiting_Duration is missing, is not a finite number, or is less than zero hours, THEN THE Calculation_Core SHALL disable the Panama Route_Option Journey_Time calculation without disabling the Suez Route_Option Journey_Time calculation, substitute no default, zero, or other value for Waiting_Duration, and report the missing or invalid Waiting_Duration as the reason the Panama Route_Option Journey_Time is unavailable.
+12. WHEN the Calculation_Core produces a Suez Route_Option result, THE Calculation_Core SHALL record in that result a disclosure indicating that Suez waiting time is not modeled and is excluded from the Suez Route_Option Journey_Time, regardless of the Waiting_Duration scenario input, including a value of zero hours, and regardless of whether the Suez Route_Option Journey_Time is computed or disabled.
+13. WHEN the Calculation_Core produces a Suez Route_Option result, THE Calculation_Core SHALL report Suez waiting time in that result as not modeled with no numeric value, rather than as zero hours, as the Waiting_Duration scenario input value, or as a missing or invalid input.
 
 ### Requirement 7: Apply one consistent cubic speed-fuel curve
 
@@ -132,6 +137,7 @@ This document uses the following status vocabulary for model inputs, drawn direc
 4. THE Calculation_Core SHALL report waiting fuel and canal-operation fuel as line items distinct from Sailing_Fuel, each with its own value and without summing them into Sailing_Fuel.
 5. IF a fuel rate required for waiting fuel or canal-operation fuel is missing, THEN THE Calculation_Core SHALL leave that rate as an unresolved input, disable the fuel figure that depends on the missing rate, and report which rate is needed while still reporting any fuel figures whose inputs are fully resolved.
 6. THE Calculation_Core SHALL compute fuel figures using only the loaded ship constants and SHALL NOT combine them with any alternative ship profile.
+7. THE Calculation_Core SHALL compute the Suez Route_Option total voyage fuel from its Sailing_Fuel and canal-operation fuel only, SHALL report Suez waiting fuel as not modeled rather than as zero or unresolved, and SHALL NOT treat Suez waiting fuel as an unresolved component of the Suez total voyage fuel.
 
 ### Requirement 8: Compute voyage fuel cost and fuel cost per loaded TEU
 
@@ -207,7 +213,7 @@ This document uses the following status vocabulary for model inputs, drawn direc
 
 #### Acceptance Criteria
 
-1. THE Streamlit_Interface SHALL provide controls for route selection, speed in knots, load factor, bunker price in United States dollars per tonne, Waiting_Duration in days, deadline in days, and Selection_Priority.
+1. THE Streamlit_Interface SHALL provide controls for route selection, speed in knots, load factor, bunker price in United States dollars per tonne, Panama Waiting_Duration in days, labeled as applying only to the Panama route, deadline in days, and Selection_Priority.
 2. THE Streamlit_Interface SHALL restrict each numeric control to the range defined for its Model_Input in the loaded constants: speed greater than zero knots, load factor from zero to one inclusive, bunker price greater than zero, Waiting_Duration greater than or equal to zero days, and deadline greater than zero days.
 3. THE Streamlit_Interface SHALL restrict the Selection_Priority control to exactly the values fastest Journey_Time, lowest fuel cost per TEU, and lowest carbon dioxide.
 4. THE Streamlit_Interface SHALL restrict route selection to the OD_Pairs that have both a Panama Route_Option distance and a Suez Route_Option distance.
@@ -234,7 +240,7 @@ This document uses the following status vocabulary for model inputs, drawn direc
 #### Acceptance Criteria
 
 1. WHEN results are displayed, THE Streamlit_Interface SHALL display, for each input behind those results, the input's source or assumption rationale, its status as one of sourced, approximate, assumption, or derived, and the data date associated with that input.
-2. WHEN results are displayed, THE Streamlit_Interface SHALL display the list of excluded cost items, stating at minimum that tolls, insurance, and other unmodeled costs are excluded, and SHALL state that the displayed emissions represent fuel-combustion carbon dioxide only and exclude lifecycle emissions.
+2. WHEN results are displayed, THE Streamlit_Interface SHALL display the list of excluded cost items, stating at minimum that tolls, insurance, and other unmodeled costs are excluded, and SHALL state that the displayed emissions represent fuel-combustion carbon dioxide only and exclude lifecycle emissions, and SHALL state that Suez waiting time is not modeled.
 3. WHEN a Required_Input is missing, THE Streamlit_Interface SHALL list that missing input by name, disable the calculation that depends on it, and state in plain language what value is needed to enable that calculation.
 4. THE Streamlit_Interface SHALL NOT display any shipping-line name or logo.
 5. WHERE a carrier example is shown, THE Streamlit_Interface SHALL label it as Carrier A, Carrier B, or Carrier C.
@@ -279,6 +285,7 @@ This document uses the following status vocabulary for model inputs, drawn direc
 7. IF a speed is invalid, THEN THE Calculation_Core SHALL handle the condition explicitly as specified in Requirement 6.
 8. IF a distance is missing, THEN THE Calculation_Core SHALL handle the condition explicitly as specified in Requirements 6 and 11.
 9. IF payload is zero, THEN THE Calculation_Core SHALL handle the condition explicitly as specified in Requirements 8 and 11.
+10. WHILE distance, speed, Canal_Duration, ship configuration, and all other Required_Inputs are fixed, THE Calculation_Core SHALL produce a Suez Route_Option Journey_Time that does not change when Waiting_Duration changes, and a Panama Route_Option Journey_Time that changes by the change in Waiting_Duration in hours within a relative tolerance of 1e-9.
 
 ### Requirement 19: Project boundaries and non-goals
 

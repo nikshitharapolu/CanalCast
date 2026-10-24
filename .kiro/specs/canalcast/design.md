@@ -12,7 +12,7 @@ This design realizes three non-negotiable principles from the product definition
 
 The design draws the I/O boundary sharply. The **Data_Loader** performs all file input and output (read-only) against the local `data/` folder (Requirement 1.2, 1.4). The **Calculation_Core** performs no file I/O and no network I/O (Requirement 1.3, 1.7). No module makes a network call at runtime. Optional historical series (canal events, transits, ONI, RONI, ENSO context, surcharges) never block the core comparison (Requirement 4).
 
-This version 1 deliberately excludes tolls, insurance, carrier surcharges, lifecycle emissions, and any draft-related cargo-loss modeling, and discloses those exclusions in the result. There is no severity curve and no cargo-loss output anywhere in this design.
+This version 1 deliberately excludes tolls, insurance, carrier surcharges, lifecycle emissions, and any draft-related cargo-loss modeling, and discloses those exclusions in the result. There is no severity curve and no cargo-loss output anywhere in this design. Waiting_Duration applies only to the Panama option. Suez waiting time is not modeled, and the Suez result discloses that instead of showing zero.
 
 ## Architecture
 
@@ -42,7 +42,7 @@ flowchart TD
     end
 
     subgraph RESULT["Result model — src/canalcast/results.py"]
-        RES["OptionResult, ComparisonResult,<br/>Unavailable(reason), Selection"]
+        RES["OptionResult, ComparisonResult,<br/>Unavailable(reason), NotModeled(reason),<br/>Selection"]
     end
 
     subgraph UI["Streamlit_Interface — app.py + src/canalcast/ui/*<br/>(LATER PHASE; imports core, never imported by core)"]
@@ -86,7 +86,7 @@ flowchart TD
 ```
 src/canalcast/
     __init__.py
-    models.py          # typed domain records + Status enum + ProvenancedValue + Unavailable
+    models.py          # typed domain records + Status enum + ProvenancedValue + Unavailable + NotModeled
     loader.py          # Data_Loader: ALL file I/O; CSV read + validation + provenance
     calculations.py    # pure per-option math: time, fuel, cost, CO2
     comparison.py      # pure OD-pair comparison + priority selection + tie handling
@@ -118,9 +118,18 @@ def load_optional(data_dir: Path) -> dict[str, OptionalSeries]: ...
 
 # calculations.py  (pure)
 def sailing_time_hours(distance_nm: float, speed_kn: float) -> ResultOrUnavailable[float]: ...
-def journey_time_hours(sailing_h, canal_duration_h, waiting_duration_h) -> ResultOrUnavailable[float]: ...
+# waiting_duration_h is a REQUIRED argument, so no caller can drop it by omission.
+# Panama passes the explicit input: sailing + canal + waiting (Req 6.7).
+# Suez passes NotModeled: sailing + canal, and the waiting input is never validated (Req 6.6).
+def journey_time_hours(sailing_h, canal_duration_h,
+                       waiting_duration_h: float | None | NotModeled) -> ResultOrUnavailable[float]: ...
 def fuel_rate_t_per_day(speed_kn, base_fuel_t_per_day, base_speed_kn, speed_exponent) -> ResultOrUnavailable[float]: ...
 def sailing_fuel_t(fuel_rate_t_per_day: float, sailing_time_hours: float) -> ResultOrUnavailable[float]: ...
+def waiting_fuel_t(duration_h, fuel_rate_t_per_day) -> ResultOrUnavailable[float]: ...   # called for Panama only
+def canal_fuel_t(duration_h, fuel_rate_t_per_day) -> ResultOrUnavailable[float]: ...
+# A NotModeled waiting component is excluded from the sum, not treated as unresolved (Req 7.7).
+def total_voyage_fuel_t(sailing_fuel, waiting_fuel: ResultOrUnavailable[float] | NotModeled,
+                        canal_fuel) -> ResultOrUnavailable[float]: ...
 def voyage_fuel_cost_usd(total_fuel_t: float, bunker_price_usd_per_t: float) -> ResultOrUnavailable[float]: ...
 def loaded_teu(capacity_teu: float, load_factor: float) -> ResultOrUnavailable[float]: ...
 def fuel_cost_per_teu_usd(voyage_fuel_cost_usd: float, loaded_teu: float) -> ResultOrUnavailable[float]: ...
@@ -135,6 +144,8 @@ def compare_od_pair(od_pair: ODPair, scenario: Scenario, constants: Constants,
 # explain.py  (pure)
 def explain(result: ComparisonResult, max_words: int = 120) -> str: ...
 ```
+
+**Waiting is passed only for Panama (Requirements 6.5–6.7, 6.11).** `compute_option` reads `scenario.waiting_duration_h` only when `route_opt.option == "panama"`, and passes it to `journey_time_hours` and `waiting_fuel_t`. A `None`, non-finite, or negative value makes Panama's journey time and waiting fuel `Unavailable` naming `waiting_duration_h`, and sets Panama's deadline status to `undetermined`. Values that depend on them (Panama total voyage fuel, then its cost, cost per TEU, and CO2) are `Unavailable` too. For Suez, `compute_option` never reads the waiting input. It passes the module constant `SUEZ_WAITING_NOT_MODELED` (a `NotModeled`) to `journey_time_hours` and `total_voyage_fuel_t`, stores that value in both Suez waiting fields, adds `"Suez waiting time (not modeled)"` to the Suez exclusions, and sets `waiting_not_modeled_disclosure`. The Suez option result is therefore the same whether the waiting input is present, zero, missing, or invalid (Requirements 6.6, 6.12, 6.13).
 
 ## Data Models
 
@@ -174,7 +185,7 @@ class RouteOption:
     origin: str
     destination: str
     option: Literal["panama", "suez"]
-    distance_nm: ProvenancedValue | None     # None if absent -> journey time disabled (Req 6.6)
+    distance_nm: ProvenancedValue | None     # None if absent -> journey time disabled (Req 6.8)
     origin_lon: float; origin_lat: float
     destination_lon: float; destination_lat: float
     passages: str                              # context label, e.g. "babalmandab;gibraltar;malacca;suez"
@@ -220,7 +231,7 @@ class Constants:
     speed_exponent: ProvenancedValue             # 3, derived
     bunker_price_usd_per_t: ProvenancedValue     # 876.5, sourced
     reference_draft_ft: ProvenancedValue         # 50.0, sourced (context)
-    canal_wait_days_default: ProvenancedValue    # 0, assumption (default waiting TIME)
+    canal_wait_days_default: ProvenancedValue    # 0, assumption; seeds the UI Panama waiting control only, never a core fallback
     # Fuel RATES for waiting/canal operation are NOT present in constants.csv.
     waiting_fuel_t_per_day: ProvenancedValue | None = None   # unresolved input (Req 7.5)
     canal_fuel_t_per_day: ProvenancedValue | None = None     # unresolved input (Req 7.5)
@@ -257,13 +268,15 @@ class Scenario:
     load_factor: float | None
     bunker_price_usd_per_t: float | None
     canal_duration_h: float | None
-    waiting_duration_h: float | None             # from explicit input; default 0 by assumption (Req 6.2, 6.3)
+    waiting_duration_h: float | None             # Panama waiting (h), explicit input only; None disables only Panama journey time (Req 6.2, 6.3, 6.5, 6.11)
     deadline_h: float | None
     suez_available: bool                          # explicit scenario assumption (Req 11.2)
     selection_priority: Literal["fastest", "lowest_cost_per_teu", "lowest_co2"]
     fuel_type: str                                # selects the matching EmissionFactor
     canal_state: CanalState                        # draft shown as CONTEXT (Req 10)
 ```
+
+`waiting_duration_h` is the Panama waiting duration in hours, taken only from an explicit input (Requirement 6.3). The core never reads it for Suez and never fills a missing value with zero: `None` disables only the Panama journey time (Requirement 6.11). The UI may seed its Panama waiting control from `canal_wait_days_default` (0 days, status assumption) and converts days to hours before building the `Scenario`.
 
 ### The missing/unavailable pattern
 
@@ -280,25 +293,33 @@ class Unavailable:
 ResultOrUnavailable = Union[T, Unavailable]      # where T is the computed numeric value
 ```
 
+**Not modeled is a separate state.** `NotModeled` marks a quantity that is outside the v1 model, not one whose inputs are missing. It is used only for the Suez option's `JourneyTimeBreakdown.waiting_duration_h` and `FuelBreakdown.waiting_fuel_t` (Requirements 6.13, 7.7). It is never shown as `0`, never shown or counted as unavailable, and never named as a missing input.
+
+```python
+@dataclass(frozen=True)
+class NotModeled:
+    reason: str      # e.g. "Suez waiting time is not modeled in v1"
+```
+
 ## The Result Structure
 
-This is the contract agreed in design before implementation. Every numeric field carries its unit in the field name or an attached unit string, and every field that may be absent is an `Unavailable` rather than a substituted value.
+This is the contract agreed in design before implementation. Every numeric field carries its unit in the field name or an attached unit string, and every field that may be absent is an `Unavailable` rather than a substituted value. The two Suez waiting fields are the one exception: they are `NotModeled`, because Suez waiting is outside the model rather than missing.
 
 ```python
 @dataclass(frozen=True)
 class JourneyTimeBreakdown:
     sailing_time_h: ResultOrUnavailable[float]
     canal_duration_h: ResultOrUnavailable[float]
-    waiting_duration_h: ResultOrUnavailable[float]
-    journey_time_h: ResultOrUnavailable[float]      # sum when all parts present (Req 6.5)
+    waiting_duration_h: ResultOrUnavailable[float] | NotModeled  # Panama: explicit input or Unavailable (Req 6.11); Suez: always NotModeled (Req 6.13)
+    journey_time_h: ResultOrUnavailable[float]      # Panama: sailing + canal + waiting (Req 6.7); Suez: sailing + canal (Req 6.6)
 
 @dataclass(frozen=True)
 class FuelBreakdown:
     fuel_rate_t_per_day: ResultOrUnavailable[float]
     sailing_fuel_t: ResultOrUnavailable[float]
-    waiting_fuel_t: ResultOrUnavailable[float]      # distinct line item; Unavailable if rate missing (Req 7.4, 7.5)
+    waiting_fuel_t: ResultOrUnavailable[float] | NotModeled  # Panama: distinct line item, Unavailable if Waiting_Duration or its rate is unresolved (Req 7.4, 7.5); Suez: always NotModeled (Req 7.7)
     canal_fuel_t: ResultOrUnavailable[float]        # distinct line item; Unavailable if rate missing (Req 7.4, 7.5)
-    total_voyage_fuel_t: ResultOrUnavailable[float] # sum of resolved fuel line items
+    total_voyage_fuel_t: ResultOrUnavailable[float] # Panama: sailing + waiting + canal; Suez: sailing + canal, NotModeled waiting excluded (Req 7.7)
 
 @dataclass(frozen=True)
 class OptionResult:
@@ -313,25 +334,38 @@ class OptionResult:
     fuel_cost_per_teu_usd: ResultOrUnavailable[float]   # Unavailable(reason="loaded TEU is zero") when payload 0 (Req 8.4)
     co2_tank_to_wake_t: ResultOrUnavailable[float]      # labeled tank-to-wake, NOT lifecycle (Req 9.5)
 
-    feasible: bool | None                           # journey_time_h <= deadline_h; None if time unavailable
+    feasible: bool | None                           # journey_time_h <= deadline_h; None when deadline_status is "undetermined"
     deadline_status: str                            # "meets deadline" | "misses deadline" | "undetermined"
+    deadline_undetermined_inputs: tuple[str, ...]   # when undetermined: missing/invalid inputs, e.g. ("waiting_duration_h",) or ("deadline_h",) (Req 3.1, 14.3)
     infeasible: bool                                # True when loaded_teu == 0 (Infeasible_Result, Req 11.9)
     infeasible_reason: str | None
 
     draft_context_ft: ProvenancedValue              # canal-state max draft as CONTEXT label (Req 10.1)
     draft_not_modeled_disclosure: str               # fixed text: draft cargo-capacity effects not modeled in v1 (Req 10.4)
-    exclusions: tuple[str, ...]                     # tolls, insurance, carrier surcharges, lifecycle emissions, draft cargo-loss (Req 8.6)
+    exclusions: tuple[str, ...]                     # tolls, insurance, carrier surcharges, lifecycle emissions, draft cargo-loss (Req 8.6); Suez adds "Suez waiting time (not modeled)" (Req 6.12, 15.2)
     cost_label: str = "fuel cost"                   # never "total shipping cost" (Req 8.8)
     input_provenance: Mapping[str, ProvenancedValue]  # provenance for each input behind this option (Req 11.10)
+    waiting_not_modeled_disclosure: str | None = None  # Suez: fixed text that Suez waiting is not modeled and is excluded from its journey time and fuel; None for Panama (Req 6.12, 15.2)
+
+SelectionOutcome = Literal[
+    "selected",                     # a Feasible_Option was selected by the priority metric
+    "all_available_miss",           # every available option has a resolved journey time and misses the deadline
+    "feasibility_undetermined",     # some available option is undetermined and none is known feasible
+    "priority_metric_unavailable",  # a Feasible_Option exists but its priority metric is Unavailable
+    "no_available_option",          # exclusions removed every option
+    "comparison_rejected",          # comparison_error is set (Req 11.1)
+]
 
 @dataclass(frozen=True)
 class Selection:
-    selected_option: Literal["panama", "suez"] | None   # None when no feasible option (Req 11.5)
+    selected_option: Literal["panama", "suez"] | None   # set only when outcome == "selected" (Req 11.4)
     priority: str                                        # the Selection_Priority used
-    no_feasible_option: bool
-    closest_option: Literal["panama", "suez"] | None     # min journey time when none feasible (Req 11.5)
+    no_feasible_option: bool                             # True only when outcome == "all_available_miss"
+    closest_option: Literal["panama", "suez"] | None     # faster available route; set only when outcome == "all_available_miss" (Req 11.5)
     tie_resolution: str | None                           # which tie step resolved it (Req 11.8)
-    message: str                                         # plain-language outcome
+    message: str                                         # plain-language outcome, scoped to available options
+    outcome: SelectionOutcome                            # see "Deadline status and selection outcomes" below
+    unresolved_inputs: Mapping[str, tuple[str, ...]]     # per available option left uncompared: the missing/invalid inputs the message names
 
 @dataclass(frozen=True)
 class ComparisonResult:
@@ -351,6 +385,29 @@ Notes that pin down the contract:
 - **Infeasible option** (zero loaded TEU) sets `infeasible=True`, keeps `fuel_cost_per_teu_usd` as `Unavailable`, and the comparison excludes it from selection when the active priority is `lowest_cost_per_teu` (Requirement 11.9).
 - **Draft** appears only as `draft_context_ft` plus the `draft_not_modeled_disclosure`; it never reduces TEU, cost, fuel, or CO2 (Requirement 10). There are no severity-curve or cargo-loss fields.
 - **Booking-slot limit vs actual transit**: `CanalState.daily_slots` is labeled a booking-slot limit; actual transits (from the optional `transits.csv`) are a separate labeled quantity and are never presented as interchangeable (Requirement 5.1).
+- **Not modeled is not unavailable**: Suez waiting duration and waiting fuel are `NotModeled`, never `0.0` and never `Unavailable`. The Suez total voyage fuel is sailing fuel plus canal fuel, so a missing waiting input or waiting fuel rate never leaves the Suez total unresolved (Requirements 6.13, 7.7).
+- **Undetermined is not a miss**: an `undetermined` deadline status names its cause in `deadline_undetermined_inputs` and is never counted or described as missing the deadline.
+
+### Deadline status and selection outcomes
+
+`compute_option` sets each option's deadline status from that option's own journey time:
+
+- `meets deadline`: journey time resolved, deadline present and valid, journey time ≤ deadline.
+- `misses deadline`: journey time resolved, deadline valid, journey time > deadline.
+- `undetermined`: journey time `Unavailable` (for Panama this includes a missing or invalid Waiting_Duration, Requirement 6.11), or deadline missing or invalid. `deadline_undetermined_inputs` names the cause.
+
+`compare_od_pair` then resolves exactly one `SelectionOutcome` by checking these rows in order. Exclusions (Suez marked unavailable, Requirement 11.3; zero loaded TEU under lowest fuel cost per TEU, Requirement 11.9) apply first. Every later row considers only the remaining available options, and all copy is scoped to them.
+
+| Order | Condition | `outcome` | Selection | Message |
+|---|---|---|---|---|
+| 1 | `comparison_error` is set (Req 11.1) | `comparison_rejected` | none | Names the missing or invalid distance |
+| 2 | Exclusions leave no available option | `no_available_option` | none | Names each exclusion reason; makes no deadline claim |
+| 3 | At least one available option meets the deadline, and each of those has a resolved priority metric | `selected` | The Feasible_Option that minimizes the metric, with tie handling (Req 11.4–11.8) | States the priority. Names any available option left uncompared because its status is undetermined, with its missing input |
+| 4 | At least one available option meets the deadline, but one of those has an `Unavailable` priority metric | `priority_metric_unavailable` | none | Names the option and the inputs behind its missing metric (Req 3.1) |
+| 5 | Every available option's status is `misses deadline` | `all_available_miss` | none; `closest_option` is the faster available route (Req 11.5) | Two available options: "Neither route meets the deadline", naming the faster route. One available option: "The only available route, Panama, misses the deadline", plus the reason the other option is excluded |
+| 6 | No available option meets the deadline, and at least one is `undetermined` | `feasibility_undetermined` | none | Names each undetermined option and its missing input. May report another option's resolved status. Never says that no route or neither route meets the deadline |
+
+The rows partition every comparison, and row 2 runs before row 5 so an empty available set can never read as "all miss". They cover the four cases in Task 15.2: missing deadline or undetermined feasibility (row 6), no available option with a resolvable journey time (row 6), no available option meeting the deadline (row 5 with one available option), and both available routes missing (row 5 with two). `unresolved_inputs` records, for each available option left uncompared in rows 3, 4, and 6, the inputs its message names. Properties 6–8 quantify over comparisons whose Feasible_Options all have a resolved priority metric; row 4 disables selection under Requirement 3.1 and is covered by example tests.
 
 ## Correctness Properties
 
@@ -410,13 +467,13 @@ The Calculation_Core is a set of pure functions over numeric inputs with clear i
 
 *For any* speed less than or equal to zero knots, the sailing-time calculation returns an `Unavailable` that names the invalid speed, and no sailing time or sailing fuel value is produced.
 
-**Validates: Requirements 6.7, 18.7**
+**Validates: Requirements 6.9, 18.7**
 
 ### Property 10: Missing distance disables journey time without substitution
 
 *For any* Route_Option whose distance is missing, the journey-time calculation for that option returns an `Unavailable` naming the missing distance, and no distance value is substituted.
 
-**Validates: Requirements 6.6, 18.8**
+**Validates: Requirements 6.8, 18.8**
 
 ### Property 11: Zero loaded TEU yields undefined per-TEU cost, not zero
 
@@ -448,9 +505,15 @@ The Calculation_Core is a set of pure functions over numeric inputs with clear i
 
 **Validates: Requirements 9.2, 9.3, 9.4**
 
+### Property 16: Waiting moves only the Panama journey time
+
+*For any* valid scenario and any two waiting durations w1 and w2, the Suez Journey_Time is identical, and the Panama Journey_Time differs by (w2 − w1) hours within a relative tolerance of 1e-9.
+
+**Validates: Requirements 6.5, 6.6, 6.7, 18.10**
+
 ## Error Handling
 
-The system uses one consistent error-handling pattern, the **Optional-with-reason** `Unavailable` object, for every situation where a value cannot be produced. The core never raises on bad-but-expected inputs; it returns `Unavailable`. The loader raises/returns structured load errors only for file-level and provenance-validation failures.
+The system uses one consistent error-handling pattern, the **Optional-with-reason** `Unavailable` object, for every situation where a value cannot be produced. The core never raises on bad-but-expected inputs; it returns `Unavailable`. The loader raises/returns structured load errors only for file-level and provenance-validation failures. `NotModeled` is not an error state: it marks Suez waiting, which is outside the v1 model, and is never treated as a missing input.
 
 | Condition | Handling | Requirement |
 |---|---|---|
@@ -460,17 +523,22 @@ The system uses one consistent error-handling pattern, the **Optional-with-reaso
 | `derived` without derived_from/method | Reject record, report id | 2.4 |
 | Optional series absent | Record unavailable with reason "not found"; continue loading others | 4.2 |
 | Optional series present but unreadable | Record unavailable with reason "could not be read"; continue | 4.3 |
-| Speed ≤ 0 knots | `Unavailable` naming invalid speed; sailing time/fuel not produced | 6.7 |
-| Distance missing | `Unavailable` naming missing distance; journey time disabled | 6.6 |
-| Canal or waiting duration missing/negative | `Unavailable` naming which duration; journey time disabled | 6.8 |
-| Waiting/canal **fuel rate** missing from constants | That line item is `Unavailable` (unresolved input); other fuel figures still reported | 7.5 |
+| Speed missing, non-finite, or ≤ 0 knots | `Unavailable` naming invalid speed; sailing time/fuel not produced; journey time disabled for both options | 6.9 |
+| Distance missing, non-finite, or ≤ 0 nm | `Unavailable` naming the distance; that option's sailing and journey time disabled; the other option unaffected | 6.8 |
+| Canal_Duration missing, non-finite, or negative | `Unavailable` naming `canal_duration_h`; journey time disabled for both options | 6.10 |
+| Waiting_Duration missing, non-finite, or negative | Panama journey time `Unavailable` naming `waiting_duration_h`; Panama deadline status undetermined; Suez journey time still computed | 6.11 |
+| Suez waiting (any Waiting_Duration input, including 0, missing, or invalid) | `NotModeled` for Suez waiting duration and waiting fuel, with the "Suez waiting time (not modeled)" exclusion and disclosure; never 0, never `Unavailable`; Suez total fuel = sailing + canal | 6.12, 6.13, 7.7 |
+| Panama waiting or canal **fuel rate** missing from constants | That line item is `Unavailable` (unresolved input); other fuel figures still reported | 7.5 |
 | Loaded TEU zero | `fuel_cost_per_teu_usd` = `Unavailable(reason)`; Infeasible_Result; excluded from cost-per-TEU selection | 8.4, 11.9 |
 | Load factor outside [0,1] | Affected outputs `Unavailable`, naming the invalid input | 8.5 |
 | Fuel-type / emission-factor mismatch or no factor | CO2 `Unavailable` with reason; CO2 not produced | 9.3, 9.4 |
 | Unsupported container type | Disable only that conversion; keep all other labeled quantities | 5.4 |
 | OD_Pair lacks both positive panama & suez distances | `comparison_error` = `Unavailable` naming the missing/invalid distance; comparison rejected | 11.1 |
-| Suez marked unavailable | Exclude Suez from selection; record the exclusion | 11.3 |
-| No feasible option | Selection has `no_feasible_option=True`, reports closest option by min journey time, makes no selection | 11.5 |
+| Suez marked unavailable | Exclude Suez from selection before deadline evaluation; record the exclusion; scope selection copy to available options | 11.3 |
+| Exclusions remove every option | Outcome `no_available_option`: no selection; names each exclusion reason; no deadline claim | 11.3, 11.9 |
+| Every available option has a resolved journey time and misses the deadline | Outcome `all_available_miss`: no selection; `no_feasible_option=True`; names the faster available route; "Neither route meets the deadline" only when both options are available | 11.5 |
+| Deadline missing/invalid, or an available option's journey time unavailable, with no option known feasible | Outcome `feasibility_undetermined`: no selection; names each missing input; no miss message | 3.1, 11.5 |
+| A Feasible_Option's priority metric is unavailable | Outcome `priority_metric_unavailable`: no selection; names the option and the inputs behind the missing metric | 3.1, 11.4 |
 | UI numeric input out of range | Reject value, retain last valid Scenario, show which input is out of range | 13.7 |
 
 **No substitution rule.** In every "missing/invalid" row above, the core leaves the value missing and never substitutes a default, zero, or invented number (Requirement 3.3). This is asserted by Properties 9–11 and 13.
@@ -490,8 +558,10 @@ The Calculation_Core is implemented and fully tested **before** any Streamlit_In
 - `distance_nm`: floats across the observed route range and beyond (e.g. 1.0–30000.0 nm) for monotonicity (Properties 3–5).
 - `load_factor`: floats in [0.0, 1.0] for valid cases; an out-of-range strategy for error branches; a zero-payload case (capacity × 0 or capacity 0) for Property 11.
 - `fuel_type`: sampled from {HFO, LFO, MDO} for matching cases and from unmatched strings for Property 15.
-- `priority` and two generated `OptionResult`s with controlled metrics for selection and tie properties (Properties 6–8), including pairs engineered to sit within 0.001 of each other.
+- `priority` and two generated `OptionResult`s with controlled metrics for selection and tie properties (Properties 6–8), including pairs engineered to sit within 0.001 of each other. Every generated Feasible_Option carries a resolved priority metric, because a Feasible_Option with an unavailable metric disables selection (outcome `priority_metric_unavailable`, covered by examples).
 - `container_type`: {20ft, 40ft} plus unsupported types for Property 12.
+- `waiting_h`: pairs of finite floats in [0.0, 2000.0] hours for Property 16, combined with valid distance, speed, and canal-duration draws. Property 16 compares the Suez journey times with exact equality, since the Suez path never reads the waiting input. For Panama it asserts `math.isclose(jt_panama(w2), jt_panama(w1) + (w2 - w1), rel_tol=1e-9)`; applying a pure relative tolerance to the raw difference is ill-conditioned when w1 ≈ w2.
+- Property 13's scenario generator also draws missing, negative, and non-finite Waiting_Duration values. Under those, the Panama journey time must be `Unavailable` and the Suez journey time must still compute (Requirements 6.6, 6.11).
 
 ### Worked examples (example-based)
 
@@ -499,9 +569,34 @@ At 18 kn with base 175 t/day at 22 kn and exponent 3: `175 * (18/22)^3 ≈ 95.9 
 
 Additional example tests cover: sailing time `distance/speed`, voyage fuel cost `total_fuel * bunker_price`, loaded TEU `10000 * 0.85 = 8500`, cost per TEU, and CO2 `total_fuel * 3.114` for HFO.
 
+**Panama-only waiting (companion to Property 16).** Shanghai → New York at 18 kn, with 12 h canal time on both routes:
+
+- Panama with no waiting: 10,638.9 nm / 18 kn = 591.05 h sailing + 12 h = 603.05 h (25.1 days).
+- Suez at every Panama waiting value: 12,380.2 nm / 18 kn = 687.788… h sailing + 12 h = 699.788… h (29.2 days).
+- Break-even Panama waiting: 699.788… − 603.05 = 96.738… h, shown as 96.7 h (4.03 days).
+- With a 40-day deadline (960 h) and priority "fastest", 3 days (72 h) of Panama waiting gives 675.05 h (28.1 days) against 699.788… h (29.2 days), so Panama is selected. 5 days (120 h) gives 723.05 h (30.1 days), so Suez is selected.
+
+Tests compute expected hours from the formulas and compare within 1e-9; the day figures are display rounding.
+
+**Selection outcomes.** The same route, speed, and canal time pin each row of the outcome table, including Task 15.2's missing-deadline and Suez-excluded regressions:
+
+| Panama waiting | Deadline | Suez | Priority | Expected outcome |
+|---|---|---|---|---|
+| 0 h | 28 days (672 h) | available | fastest | `selected`: Panama (603.05 h meets; Suez 699.788… h misses) |
+| 72 h | 28 days | available | fastest | `all_available_miss`: "Neither route meets the deadline"; faster route Panama (675.05 h vs 699.788… h); no selection |
+| 72 h | 28 days | unavailable | fastest | `all_available_miss` with one available option: "The only available route, Panama, misses the deadline"; Suez exclusion named; no "neither" wording |
+| missing | 28 days | available | fastest | `feasibility_undetermined`: Panama undetermined, naming `waiting_duration_h`; Suez misses; no "neither" wording |
+| missing | 40 days | available | fastest | `selected`: Suez, the only route known to meet the deadline; message names Panama's missing `waiting_duration_h` |
+| 0 h | missing | available | fastest | `feasibility_undetermined`: both undetermined, naming `deadline_h` |
+| 0 h | 40 days | available | lowest CO2 | `priority_metric_unavailable`: CO2 unavailable for both because the 12 h canal time has no canal fuel rate |
+
+The last row relies on CO2 using resolved total voyage fuel only (Requirements 8.1, 9.1), which Task 15.1 restores.
+
+**Suez not modeled.** A parametrized test over Waiting_Duration inputs of 0 h, 72 h, `None`, −1 h, and NaN, plus one invalid-speed case where the Suez journey time is disabled, asserts that both Suez waiting fields are `NotModeled` (not `0.0`, not `Unavailable`), the Suez exclusions include "Suez waiting time (not modeled)", `waiting_not_modeled_disclosure` is set, and the Suez total voyage fuel equals sailing plus canal fuel whenever those two resolve (Requirements 6.12, 6.13, 7.7).
+
 ### UI-phase tests (later)
 
-Preset population, control ranges, side-by-side layout, disclosure text, chart missing-series notes, and the ≤120-word explanation are covered by example and snapshot tests, not property tests, consistent with the PBT-applicability guidance (UI rendering is not a pure-function property domain).
+Preset population, control ranges, side-by-side layout, disclosure text (including that Suez waiting is not modeled), the Panama-only label on the waiting control, Suez waiting rendered as "not modeled", chart missing-series notes, and the ≤120-word explanation are covered by example and snapshot tests, not property tests, consistent with the PBT-applicability guidance (UI rendering is not a pure-function property domain).
 
 ## Streamlit Interface Design (Later Phase)
 
@@ -515,15 +610,15 @@ The interface imports the Calculation_Core and renders its `ComparisonResult`. I
 
 ### Controls (Requirement 13)
 
-Route selection (restricted to OD_Pairs having both a Panama and a Suez distance — all three present pairs qualify), speed (kn, > 0), load factor ([0,1]), bunker price (USD/t, > 0), waiting duration (days, ≥ 0), deadline (days, > 0), Selection_Priority (exactly: fastest journey time, lowest fuel cost per TEU, lowest CO2), and Suez availability (available | unavailable). Changing any in-range control recomputes from the core and replaces prior results; an out-of-range entry is rejected and the last valid scenario is retained with an indication of the offending input (Requirement 13.6, 13.7).
+Route selection (restricted to OD_Pairs having both a Panama and a Suez distance — all three present pairs qualify), speed (kn, > 0), load factor ([0,1]), bunker price (USD/t, > 0), Panama waiting duration (days, ≥ 0; labeled as applying only to the Panama route; seeded from `canal_wait_days_default`, 0 days, assumption; converted to hours for the core), deadline (days, > 0), Selection_Priority (exactly: fastest journey time, lowest fuel cost per TEU, lowest CO2), and Suez availability (available | unavailable). Changing any in-range control recomputes from the core and replaces prior results; an out-of-range entry is rejected and the last valid scenario is retained with an indication of the offending input (Requirement 13.6, 13.7).
 
 ### Results view (Requirements 14, 15, 17)
 
 - Panama and Suez shown in two adjacent columns in one viewport row, Panama first, each with exactly five metrics plus their units: Journey_Time, voyage fuel cost, fuel cost per loaded TEU, fuel-combustion CO2, and deadline status.
-- Disabled calculations show "unavailable" and name each missing Required_Input; infeasible options show the explanation and an undefined per-TEU cost; no zero or invented substitution.
+- Disabled calculations show "unavailable" and name each missing Required_Input; infeasible options show the explanation and an undefined per-TEU cost; no zero or invented substitution. An `undetermined` deadline status names its missing input. Suez waiting shows as "not modeled", never as 0 or "unavailable".
 - The exact text **"Scenario tool — not a forecast."** is displayed in the results view.
-- A disclosure panel states each input's rationale, status, and data date; lists excluded cost items (tolls, insurance, other unmodeled costs) and that emissions are fuel-combustion CO2 only (not lifecycle). No shipping-line name or logo; carrier examples, if any, are labeled Carrier A/B/C.
-- A deterministic explanation of ≤120 words is generated by `explain.py` solely from the current `ComparisonResult`, with no runtime network call; missing values are omitted and named, never invented, and the text never implies a forecast.
+- A disclosure panel states each input's rationale, status, and data date; lists excluded cost items (tolls, insurance, other unmodeled costs) and that emissions are fuel-combustion CO2 only (not lifecycle); and states that Suez waiting time is not modeled (Requirement 15.2). No shipping-line name or logo; carrier examples, if any, are labeled Carrier A/B/C.
+- A deterministic explanation of ≤120 words is generated by `explain.py` solely from the current `ComparisonResult`, with no runtime network call; missing values are omitted and named, never invented, and the text never implies a forecast. Its deadline sentence follows `Selection.outcome`, and Suez waiting is described as not modeled, never listed as unavailable.
 
 ### Historical charts (Requirement 16)
 
@@ -545,11 +640,13 @@ No public network endpoint beyond localhost; no runtime AI features, agent-coord
 
 - **Authoritative CO2 source is `emission_factors.csv`.** Both `emission_factors.csv` (HFO/LFO/MDO, IMO MEPC.346(78)) and `constants.csv` (EU MRV defaults) carry CO2 factors. The design uses `emission_factors.csv` as the single authoritative per-fuel-type table because it is explicitly scoped `tank_to_wake_CO2_only` with a per-fuel-type key, which directly supports the "fuel type and factor must agree" requirement (9.2). This choice is disclosed in the result/disclosure panel; the EU MRV values remain loadable as context but are not used for the displayed CO2 figure.
 
-- **Optional-with-reason for every missing value.** A single `Unavailable(reason, missing_inputs, invalid_inputs)` type is used everywhere rather than exceptions, sentinels, or zeros. This makes "missing stays missing, never invented" (Requirement 3) structurally enforced and uniformly testable, and keeps the core pure (no control flow via exceptions for expected conditions).
+- **Optional-with-reason for every missing value.** A single `Unavailable(reason, missing_inputs, invalid_inputs)` type is used everywhere rather than exceptions, sentinels, or zeros. This makes "missing stays missing, never invented" (Requirement 3) structurally enforced and uniformly testable, and keeps the core pure (no control flow via exceptions for expected conditions). `NotModeled` is the one other non-numeric state, reserved for Suez waiting (see "Waiting applies only to Panama" below).
 
 - **Tie-handling rule.** Among feasible options, select the minimum of the chosen priority metric; if two are within 0.001 of the metric unit, prefer lower Journey_Time; if those are also within 0.001 hours, prefer Panama. The resolving step is recorded in `Selection.tie_resolution` (Requirement 11.7, 11.8). A fixed deterministic rule guarantees reproducible selection and testability (Property 8).
 
-- **Waiting/canal fuel rates are unresolved inputs, not zeros.** `constants.csv` provides `canal_wait_days_default = 0`, so the default waiting **time** is zero by assumption. It provides **no** waiting or canal-operation fuel **rate**. The design therefore treats any absent fuel rate as an unresolved input: the corresponding fuel line item is `Unavailable` and surfaced to the user, rather than silently set to zero or invented (Requirement 7.4, 7.5). This keeps the distinction between "zero by assumption" (waiting time) and "unknown, needs a value" (fuel rate) honest.
+- **Waiting/canal fuel rates are unresolved inputs, not zeros.** `constants.csv` provides `canal_wait_days_default = 0`, which seeds the UI's Panama waiting control at zero by assumption; the core still receives waiting only as an explicit input and never fills a missing one with zero. It provides **no** waiting or canal-operation fuel **rate**. The design therefore treats any absent fuel rate as an unresolved input: the corresponding fuel line item is `Unavailable` and surfaced to the user, rather than silently set to zero or invented (Requirement 7.4, 7.5). This keeps the distinction between "zero by assumption" (the seeded Panama waiting time) and "unknown, needs a value" (fuel rate) honest.
+
+- **Waiting applies only to Panama.** CanalCast compares routes under Panama Canal restrictions, so Waiting_Duration models Panama queueing and enters only the Panama journey time and fuel. The baseline report (`reports/2026-10-24-baseline-metrics.md`) showed the problem with a shared wait: for Shanghai → New York, 0 vs 5 days of waiting moved Panama from 25.1 to 30.1 days and Suez from 29.2 to 34.2 days. The gap never changed, so no restriction input could change the winner. With Panama-only waiting, Suez becomes faster on that route once Panama waiting passes 96.7 h. Suez waiting is `NotModeled` rather than zero, so the result never implies Suez has no queue, and the disclosure says so. Modeling Suez queueing is a possible future extension.
 
 - **Draft is context only.** The canal-state max draft is carried as `draft_context_ft` with a fixed not-modeled disclosure and never enters any calculation; `containers_lost_per_10cm_draft_cut` is loaded as context and never read by the core. This keeps v1 free of cargo-loss and severity modeling (Requirement 10, 19.4).
 
