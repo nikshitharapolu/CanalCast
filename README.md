@@ -3,6 +3,9 @@
 **Panama or Suez when the canal tightens?** A scenario simulator that compares the two routings for Asia to US East Coast and Gulf container trades under Panama Canal conditions you choose.
 
 Hackachusetts 2026 · Track: **Climate Tech & Clean Energy** · Built with Kiro
+
+Demo URL: https://shipping-route-sim.streamlit.app/
+
 Demo video (under 3 minutes): PASTE_PUBLIC_VIDEO_LINK
 
 <!-- Add a screenshot once the UI is final:
