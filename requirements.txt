@@ -1,0 +1,15 @@
+# CanalCast pinned dependencies.
+#
+# The project targets Python 3.11 (see tech.md); it also runs on newer CPython.
+# Every entry below is pinned to an EXACT version with `==` — no open ranges —
+# so `pip install -r requirements.txt` reproduces the verified environment
+# (Requirements 19.5, 19.6, 19.7, 19.8).
+
+# --- Runtime dependencies ---
+streamlit==1.66.1
+pandas==3.1.0
+plotly==7.1.0
+
+# --- Test / dev dependencies ---
+pytest==9.1.1
+hypothesis==6.170.9

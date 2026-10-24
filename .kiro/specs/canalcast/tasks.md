@@ -103,33 +103,33 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - **Property 14: optional-series absence does not block the comparison** — _Requirements 4.4, 4.5_
     - Both-miss deadline case: assert faster route identified AND "neither meets the deadline" statement present, no selection made — _Requirements 11.5_
 
-- [-] 9. Checkpoint - core complete and gated
+- [x] 9. Checkpoint - core complete and gated
   - Ensure all core tests pass. The UI phase (Tasks 10+) MUST NOT begin until this checkpoint is green (Requirements 19.1, 19.2). Ask the user if questions arise.
 
-- [ ] 10. Streamlit presets and controls (`src/canalcast/ui/controls.py`)
-  - [~] 10.1 Implement presets and custom scenario
+- [x] 10. Streamlit presets and controls (`src/canalcast/ui/controls.py`)
+  - [x] 10.1 Implement presets and custom scenario
     - Normal-reference preset ⇒ draft 50.0 ft, 36 slots/day; October 2026 snapshot ⇒ draft 49.0 ft, 33 slots/day; custom ⇒ user sets draft and whole booking-slot count directly; missing required custom input disables the dependent calc and states in plain language what is needed
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6_
-  - [~] 10.2 Implement scenario input controls with range enforcement
+  - [x] 10.2 Implement scenario input controls with range enforcement
     - Controls for route, speed (>0), load factor ([0,1]), bunker price (>0), waiting duration (≥0 days), deadline (>0 days), Selection_Priority (exactly the three values), Suez availability (available/unavailable); route selection restricted to OD_Pairs with both distances; in-range change recomputes and replaces results; out-of-range input rejected, last valid scenario retained, offending input indicated
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7_
 
-- [ ] 11. Streamlit results, disclosure, and charts (`src/canalcast/ui/views.py`, `src/canalcast/ui/charts.py`)
-  - [~] 11.1 Implement side-by-side results view and disclosure panel (`views.py`)
+- [x] 11. Streamlit results, disclosure, and charts (`src/canalcast/ui/views.py`, `src/canalcast/ui/charts.py`)
+  - [x] 11.1 Implement side-by-side results view and disclosure panel (`views.py`)
     - Panama and Suez in two adjacent columns (Panama first), each with exactly the five metrics + units; unavailable calcs named with no substitution; infeasible options show explanation + undefined cost/TEU; display exact text "Scenario tool — not a forecast."
     - Disclosure panel: per-input rationale/status/data date; excluded cost items (tolls, insurance, others) and fuel-combustion-CO2-only (not lifecycle); no shipping-line name/logo; carrier examples labeled Carrier A/B/C; render the Panama tie-break convention disclosure; accessible palette (≥4.5:1 normal, ≥3:1 large text)
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 15.1, 15.2, 15.3, 15.4, 15.5, 17.6_
-  - [~] 11.2 Implement ONI/RONI historical charts (`charts.py`)
+  - [x] 11.2 Implement ONI/RONI historical charts (`charts.py`)
     - ONI and RONI as two visually distinct labeled series, never combined/averaged/summed; unavailable series omitted with in-chart note naming it; all-unavailable ⇒ suppress chart with note and keep app running; no text implying an ENSO index predicts/forecasts/causes canal restrictions; label each chart as historical observations and state historical replay is not model validation
     - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5_
 
-- [ ] 12. Wire the Streamlit app (`app.py`)
-  - [~] 12.1 Compose loader → core → explanation → UI in `app.py`
+- [x] 12. Wire the Streamlit app (`app.py`)
+  - [x] 12.1 Compose loader → core → explanation → UI in `app.py`
     - Load data, build scenario from controls/presets, call `compare_od_pair`, render views/charts and the ≤120-word explanation; UI imports the core, core never imports Streamlit
     - _Requirements: 17.1, 19.1, 19.2_
 
-- [ ] 13. Deployment artifacts and instructions
-  - [~] 13.1 Create a pinned `requirements.txt` and document local run + Streamlit deploy in the README
+- [x] 13. Deployment artifacts and instructions
+  - [x] 13.1 Create a pinned `requirements.txt` and document local run + Streamlit deploy in the README
     - Every dependency pinned to an exact version (`==`), no open ranges; local run `pip install -r requirements.txt` then `streamlit run app.py`; entry point `app.py`; no public endpoint beyond localhost
     - _Requirements: 19.3, 19.5, 19.6, 19.7, 19.8_
 

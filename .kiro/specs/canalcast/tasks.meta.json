@@ -266,6 +266,11 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792864746566
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864772068
       }
     ],
     "10.1 Implement presets and custom scenario": [
@@ -273,6 +278,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881896
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864778612
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865009149
       }
     ],
     "10.2 Implement scenario input controls with range enforcement": [
@@ -280,6 +295,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881920
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864776435
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865010169
       }
     ],
     "11.1 Implement side-by-side results view and disclosure panel (`views.py`)": [
@@ -287,6 +312,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881948
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865014154
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865182128
       }
     ],
     "11.2 Implement ONI/RONI historical charts (`charts.py`)": [
@@ -294,6 +329,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862881973
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792864777885
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865011085
       }
     ],
     "12.1 Compose loader → core → explanation → UI in `app.py`": [
@@ -301,6 +346,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862882008
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865185065
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865400646
       }
     ],
     "13.1 Create a pinned `requirements.txt` and document local run + Streamlit deploy in the README": [
@@ -308,6 +363,16 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792862882058
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865409194
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865524718
       }
     ],
     "1. Typed domain models and provenance (`src/canalcast/models.py`)": [
@@ -417,6 +482,34 @@
         "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
         "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
         "timestamp": 1792864739342
+      }
+    ],
+    "10. Streamlit presets and controls (`src/canalcast/ui/controls.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865010198
+      }
+    ],
+    "11. Streamlit results, disclosure, and charts (`src/canalcast/ui/views.py`, `src/canalcast/ui/charts.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865182177
+      }
+    ],
+    "12. Wire the Streamlit app (`app.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865400697
+      }
+    ],
+    "13. Deployment artifacts and instructions": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792865524765
       }
     ]
   }
