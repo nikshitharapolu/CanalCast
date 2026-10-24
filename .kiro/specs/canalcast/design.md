@@ -610,7 +610,7 @@ The interface imports the Calculation_Core and renders its `ComparisonResult`. I
 
 ### Controls (Requirement 13)
 
-Route selection (restricted to OD_Pairs having both a Panama and a Suez distance — all three present pairs qualify), speed (kn, > 0), load factor ([0,1]), bunker price (USD/t, > 0), Panama waiting duration (days, ≥ 0; labeled as applying only to the Panama route; seeded from `canal_wait_days_default`, 0 days, assumption; converted to hours for the core), deadline (days, > 0), Selection_Priority (exactly: fastest journey time, lowest fuel cost per TEU, lowest CO2), and Suez availability (available | unavailable). Changing any in-range control recomputes from the core and replaces prior results; an out-of-range entry is rejected and the last valid scenario is retained with an indication of the offending input (Requirement 13.6, 13.7).
+Route selection (restricted to OD_Pairs having both a Panama and a Suez distance — all ten pairs in data/routes.csv currently qualify), speed (kn, > 0), load factor ([0,1]), bunker price (USD/t, > 0), Panama waiting duration (days, ≥ 0; labeled as applying only to the Panama route; seeded from `canal_wait_days_default`, 0 days, assumption; converted to hours for the core), deadline (days, > 0), Selection_Priority (exactly: fastest journey time, lowest fuel cost per TEU, lowest CO2), and Suez availability (available | unavailable). Changing any in-range control recomputes from the core and replaces prior results; an out-of-range entry is rejected and the last valid scenario is retained with an indication of the offending input (Requirement 13.6, 13.7).
 
 ### Results view (Requirements 14, 15, 17)
 

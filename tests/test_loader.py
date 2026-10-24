@@ -364,7 +364,7 @@ def test_load_all_real_data_has_three_od_pairs_and_all_series() -> None:
     """load_all(data/) returns 3 OD pairs and every optional series available."""
     result = load_all(DATA_DIR)
 
-    assert len(result.required.od_pairs) == 3
+    assert len(result.required.od_pairs) == 10
     assert result.optional
     for name, record in result.optional.items():
         assert record.available is True, f"{name} should be available"

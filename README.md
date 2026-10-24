@@ -142,6 +142,7 @@ Defaults: 100 containers per 10 cm (analyst estimate) and 1.7 TEU per container
   and CO2 then use sailing fuel only, labeled as a partial estimate.
 - **Route distances are approximate** (searoute shortest paths) with no weather
   routing, port calls, or canal availability checks.
+- **The route set is small and fixed.** `data/routes.csv` holds 10 origin-destination pairs (Asia to the US East Coast and Gulf). Each Panama and Suez distance came from `searoute 1.4.3` run offline with approximate approach points, and each was checked to pass through its own canal and not around a cape. To add a route, generate both rows the same way and keep status `approximate`; do not hand-type distances.
 - **Booking slots are not transits and do not set waiting time.** Waiting is an
   explicit input.
 - **Historical ONI/RONI charts are context only.** They do not change with the
