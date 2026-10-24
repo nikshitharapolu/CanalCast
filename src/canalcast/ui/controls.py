@@ -592,9 +592,14 @@ def render_draft_loss_controls(
         help="Assumption factor converting containers lost into TEU lost.",
     )
     st.caption(
-        "This adjustment rests on an analyst-estimate containers-lost figure and "
-        "an assumption average-TEU-per-container factor; it affects only loaded "
-        "TEU and the per-TEU figures for the Panama option."
+        "Assumptions: the slider sets a linear slope (default 100 containers per "
+        "10 cm is an analyst estimate for Asia-USEC carriers, not a measurement "
+        "for this ship), and each lost container is converted to TEU with the "
+        "average above (an assumption). The model assumes the ship would "
+        "otherwise load to the full reference draft, so a ship loaded below that "
+        "draft could lose less. Only loaded TEU and the per-TEU figures for the "
+        "Panama option change; voyage fuel, journey time, and CO2 tonnes stay "
+        "fixed when payload falls."
     )
 
     return (

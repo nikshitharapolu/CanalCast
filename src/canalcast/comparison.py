@@ -72,11 +72,49 @@ DRAFT_NOT_MODELED_DISCLOSURE = (
 # adjustment is enabled: the adjustment rests on an ANALYST-ESTIMATE
 # containers-lost figure and an ASSUMPTION average-TEU-per-container factor
 # (Requirement 20.9).
-DRAFT_LOSS_DISCLOSURE = (
-    "The draft-based cargo-loss adjustment rests on an analyst-estimate "
-    "containers-lost-per-10cm figure and an assumption average-TEU-per-container "
-    "factor; the reduced loaded TEU and the per-TEU figures derived from it are "
-    "estimates, not observed values."
+def _draft_loss_disclosure(
+    estimate: float | None,
+    avg_teu: float | None,
+    capacity_teu: float | None,
+    load_factor: float | None,
+) -> str:
+    """Build the disclosure shown whenever draft-based cargo loss is enabled.
+
+    States the slope and container-to-TEU factor actually in use, the
+    applicability limit for the modeled ship, and that voyage fuel and CO2 are
+    held fixed when payload falls (Requirements 20.9, 20.10).
+    """
+    slope = f"{estimate:g}" if estimate is not None else "an unresolved number of"
+    conv = f"{avg_teu:g}" if avg_teu is not None else "an unresolved number of"
+    if capacity_teu is not None and load_factor is not None:
+        ship = f"the modeled {capacity_teu:,.0f}-TEU ship with a load factor of {load_factor:.0%}"
+    else:
+        ship = "the modeled ship"
+    return (
+        f"Assumed slope: {slope} containers lost per 10 cm of draft shortfall, "
+        "applied linearly from the reference draft (the default of 100 is an "
+        "analyst estimate for Asia-USEC carriers, Seatrade Maritime, Jul 2026, "
+        "not a measurement). "
+        f"Container-to-TEU conversion: each lost container is assumed to be {conv} "
+        "TEU (an assumption; a 20 ft container is 1 TEU and a 40 ft container is "
+        "2 TEU). "
+        f"Applicability: the estimate is not specific to {ship}, and the model "
+        "assumes that ship would otherwise load to the full reference draft, so a "
+        "ship loaded below that draft could lose less or nothing. "
+        "Voyage fuel and CO2 tonnes are held fixed when payload falls (no fuel "
+        "saving from lighter loading), so only loaded TEU and the per-TEU figures "
+        "change. These are estimates, not observed values."
+    )
+
+
+# Notes shown in place of the v1 "not modeled" text when draft loss is enabled.
+DRAFT_MODELED_NOTE = (
+    "Draft cargo loss is modeled as an optional estimate for this option; see "
+    "the draft-based cargo loss disclosure."
+)
+DRAFT_NOT_APPLIED_SUEZ = (
+    "Panama Canal draft limits are not applied to the Suez route, so no "
+    "draft-based loss is modeled for this option."
 )
 
 # Cost/emission items excluded from every option result (Requirement 8.6).
@@ -249,6 +287,7 @@ def compute_option(
     draft_containers_lost: float | None = None
     draft_teu_lost: float | None = None
     draft_loss_disclosure: str | None = None
+    draft_loss_computed = False
 
     if scenario.draft_loss_enabled:
         # Containers-lost estimate: explicit scenario override, else the loaded
@@ -271,8 +310,18 @@ def compute_option(
             enabled=scenario.draft_loss_enabled,
         )
 
-        draft_loss_disclosure = DRAFT_LOSS_DISCLOSURE
+        if route_opt.option == "panama":
+            base_disclosure = _draft_loss_disclosure(
+                estimate,
+                scenario.avg_teu_per_container,
+                _pv_float(constants.ship_capacity_teu),
+                scenario.load_factor,
+            )
+        else:
+            base_disclosure = DRAFT_NOT_APPLIED_SUEZ
+        draft_loss_disclosure = base_disclosure
         if isinstance(draft_loss, DraftLoss):
+            draft_loss_computed = True
             draft_shortfall_ft = draft_loss.shortfall_ft
             draft_containers_lost = draft_loss.containers_lost
             draft_teu_lost = draft_loss.teu_lost
@@ -291,11 +340,11 @@ def compute_option(
                 draft_loss.missing_inputs + draft_loss.invalid_inputs
             )
             draft_loss_disclosure = (
-                DRAFT_LOSS_DISCLOSURE
+                base_disclosure
                 + " The adjustment could not be computed because of unresolved "
                 + f"inputs ({missing_bits})."
                 if missing_bits
-                else DRAFT_LOSS_DISCLOSURE
+                else base_disclosure
                 + " The adjustment could not be computed because of unresolved inputs."
             )
 
@@ -371,6 +420,20 @@ def compute_option(
     units: dict[str, str] = dict(_UNITS)
     units["fuel_for_cost_basis"] = fuel_basis_note
 
+    modeled_here = draft_loss_computed and route_opt.option == "panama"
+    without_draft_exclusion = tuple(x for x in EXCLUSIONS if x != "draft cargo-loss")
+    if modeled_here:
+        draft_note = DRAFT_MODELED_NOTE
+        option_exclusions = without_draft_exclusion
+    elif scenario.draft_loss_enabled and route_opt.option == "suez":
+        # Draft loss is switched on but does not apply to Suez, so "draft
+        # cargo-loss" is not an exclusion the user needs warned about here.
+        draft_note = DRAFT_NOT_APPLIED_SUEZ
+        option_exclusions = without_draft_exclusion
+    else:
+        draft_note = DRAFT_NOT_MODELED_DISCLOSURE
+        option_exclusions = EXCLUSIONS
+
     return OptionResult(
         option=route_opt.option,
         route_id=route_opt.route_id,
@@ -386,8 +449,8 @@ def compute_option(
         infeasible=infeasible,
         infeasible_reason=infeasible_reason,
         draft_context_ft=scenario.canal_state.max_draft_ft,
-        draft_not_modeled_disclosure=DRAFT_NOT_MODELED_DISCLOSURE,
-        exclusions=EXCLUSIONS,
+        draft_not_modeled_disclosure=draft_note,
+        exclusions=option_exclusions,
         input_provenance=input_provenance,
         draft_loss_enabled=scenario.draft_loss_enabled,
         draft_shortfall_ft=draft_shortfall_ft,
