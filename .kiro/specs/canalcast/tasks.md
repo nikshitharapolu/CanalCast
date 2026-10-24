@@ -6,73 +6,73 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
 
 ## Tasks
 
-- [ ] 1. Typed domain models and provenance (`src/canalcast/models.py`)
-  - [ ] 1.1 Define `Status` enum and `ProvenancedValue` with value/unit/rationale/status plus optional `retrieved_on`, `method`, `derived_from`, `derivation`
+- [x] 1. Typed domain models and provenance (`src/canalcast/models.py`)
+  - [x] 1.1 Define `Status` enum and `ProvenancedValue` with value/unit/rationale/status plus optional `retrieved_on`, `method`, `derived_from`, `derivation`
     - Model missing required values as `Optional[...] = None`; never default to zero
     - _Requirements: 2.1, 2.2, 2.4, 1.6_
-  - [ ] 1.2 Define domain records `RouteOption`, `ODPair`, `EmissionFactor`, `CanalState`, `ContainerUnit`, `Constants`, `OptionalSeries`, `LoadResult`, `Scenario`
+  - [x] 1.2 Define domain records `RouteOption`, `ODPair`, `EmissionFactor`, `CanalState`, `ContainerUnit`, `Constants`, `OptionalSeries`, `LoadResult`, `Scenario`
     - All `@dataclass(frozen=True)`, fully type-hinted, no I/O methods
     - Keep range/context constants (e.g. `34-36`) as `str`; keep `containers_lost_per_10cm_draft_cut` in context only
     - _Requirements: 5.1, 5.3, 10.1, 10.2_
-  - [ ] 1.3 Define the `Unavailable` type and `ResultOrUnavailable` alias (reason + missing_inputs + invalid_inputs)
+  - [x] 1.3 Define the `Unavailable` type and `ResultOrUnavailable` alias (reason + missing_inputs + invalid_inputs)
     - Single consistent missing/invalid pattern used across the core; never `0`/`NaN`/`inf`
     - _Requirements: 3.2, 3.3_
 
-- [ ] 2. Data_Loader: all file I/O with provenance (`src/canalcast/loader.py`)
-  - [ ] 2.1 Implement required-data loading (`load_required`) reading routes, constants, canal_states, container_units, emission_factors read-only from `data/`
+- [x] 2. Data_Loader: all file I/O with provenance (`src/canalcast/loader.py`)
+  - [x] 2.1 Implement required-data loading (`load_required`) reading routes, constants, canal_states, container_units, emission_factors read-only from `data/`
     - Abort with a file-naming error on a missing/unreadable required file; produce no partial Model_Input data
     - _Requirements: 1.1, 1.2, 1.4, 1.8_
-  - [ ] 2.2 Implement provenance validation on every Model_Input
+  - [x] 2.2 Implement provenance validation on every Model_Input
     - Reject records missing value/unit/rationale/status; reject status outside {sourced, approximate, assumption, derived}; reject `derived` lacking derived_from/method; preserve original record and report record id + offending field
     - Parse only the computational constant keys to float; keep range/context keys as `str`
     - _Requirements: 1.5, 1.9, 2.3, 2.4, 2.5, 2.6_
-  - [ ] 2.3 Implement optional-series loading (`load_optional`) and assemble `load_all` into a `LoadResult`
+  - [x] 2.3 Implement optional-series loading (`load_optional`) and assemble `load_all` into a `LoadResult`
     - Record each optional series available with provenance, or unavailable with reason "not found" / "could not be read"; continue loading the rest
     - Make no network calls anywhere in the loader
     - _Requirements: 1.7, 4.1, 4.2, 4.3_
-  - [ ]* 2.4 Write loader unit tests
+  - [x]* 2.4 Write loader unit tests
     - Required-file-missing abort, each provenance-rejection branch, optional-series available/not-found/unreadable
     - _Requirements: 1.8, 1.9, 2.3, 2.4, 4.2, 4.3_
 
-- [ ] 3. Checkpoint - loader and models
+- [-] 3. Checkpoint - loader and models
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Pure calculation functions (`src/canalcast/calculations.py`)
-  - [ ] 4.1 Implement time functions: `sailing_time_hours` and `journey_time_hours`
+  - [~] 4.1 Implement time functions: `sailing_time_hours` and `journey_time_hours`
     - Sailing time = distance/speed when distance > 0 and speed > 0; `Unavailable` naming invalid speed when speed ≤ 0; `Unavailable` naming missing distance when absent
     - Journey time = sailing + canal + waiting when all present and ≥ 0; `Unavailable` naming the offending duration when any is missing/negative; waiting derived only from its explicit input, never from a booking-slot limit
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8_
-  - [ ] 4.2 Implement fuel functions: `fuel_rate_t_per_day`, `sailing_fuel_t`, and waiting/canal fuel line items
+  - [~] 4.2 Implement fuel functions: `fuel_rate_t_per_day`, `sailing_fuel_t`, and waiting/canal fuel line items
     - Cubic curve `base_fuel * (speed/base_speed)^exponent` using loaded constants only, no alternate ship profile; sailing fuel = rate × sailing days
     - Waiting/canal fuel as distinct line items (never folded into sailing fuel). Zero duration ⇒ zero fuel even when its fuel rate is absent (always resolvable); positive duration + absent rate ⇒ `Unavailable` (unresolved input). Apply the identical rule to both waiting and canal fuel
     - `total_voyage_fuel_t` is reported as "total" only when sailing, waiting, and canal components are all resolved; when any component is `Unavailable`, label the available figure as a sailing-only/partial estimate and mark the total `Unavailable` naming the missing components
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
-  - [ ] 4.3 Implement cost and TEU functions: `voyage_fuel_cost_usd`, `loaded_teu`, `fuel_cost_per_teu_usd`
+  - [~] 4.3 Implement cost and TEU functions: `voyage_fuel_cost_usd`, `loaded_teu`, `fuel_cost_per_teu_usd`
     - Cost = total fuel × bunker price; loaded TEU = capacity × load factor for load factor in [0,1]; cost/TEU when loaded TEU > 0
     - Loaded TEU zero ⇒ cost/TEU `Unavailable(reason="loaded TEU is zero")`, never zero/invented; required-input-missing or load factor out of [0,1] ⇒ affected output `Unavailable`; label output "fuel cost", never "total shipping cost"; record exclusions (tolls, insurance, surcharges)
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8_
-  - [ ] 4.4 Implement CO2 function `co2_tank_to_wake_t` and container-to-TEU conversion
+  - [~] 4.4 Implement CO2 function `co2_tank_to_wake_t` and container-to-TEU conversion
     - CO2 = total fuel × emission factor using a fuel type that exactly matches; mismatch or missing factor ⇒ `Unavailable`; label tank-to-wake, not lifecycle
     - Container conversion: exactly 1 TEU per 20ft, 2 TEU per 40ft; unsupported type ⇒ leave TEU missing, disable only that conversion, keep other quantities
     - _Requirements: 5.3, 5.4, 9.1, 9.2, 9.3, 9.4, 9.5_
 
 - [ ] 5. Result structures (`src/canalcast/results.py`)
-  - [ ] 5.1 Define `JourneyTimeBreakdown`, `FuelBreakdown`, `OptionResult`, `Selection`, `ComparisonResult`
+  - [~] 5.1 Define `JourneyTimeBreakdown`, `FuelBreakdown`, `OptionResult`, `Selection`, `ComparisonResult`
     - Per-option units map, feasibility, deadline status, infeasible flag/reason, `draft_context_ft` + fixed draft-not-modeled disclosure, exclusions, cost label, input provenance, and fixed disclaimer "Scenario tool — not a forecast."
     - _Requirements: 8.6, 8.8, 10.1, 10.3, 10.4, 11.10_
 
 - [ ] 6. Route comparison and selection (`src/canalcast/comparison.py`)
-  - [ ] 6.1 Implement `compute_option` assembling a full `OptionResult` from the calculation functions
+  - [~] 6.1 Implement `compute_option` assembling a full `OptionResult` from the calculation functions
     - Independent evaluation: one disabled calculation never suppresses another whose inputs are present; draft carried as context only, never reducing TEU/cost/fuel/CO2; zero loaded TEU ⇒ Infeasible_Result with undefined cost/TEU
     - _Requirements: 3.1, 3.4, 10.1, 10.3, 10.4, 11.9_
-  - [ ] 6.2 Implement `compare_od_pair` with priority selection, tie handling, and deadline handling
+  - [~] 6.2 Implement `compare_od_pair` with priority selection, tie handling, and deadline handling
     - Require both Panama and Suez distances > 0 or reject with a naming `comparison_error`; treat Suez availability as explicit assumption and exclude+record when unavailable; select the single non-excluded Feasible_Option minimizing the chosen metric (no weighted composites); exclude zero-TEU option from cost/TEU selection
     - Per-metric tie tolerances defined separately in each metric's own units (journey time in hours, cost/TEU in USD/TEU, CO2 in tonnes) with documented values; tie-break order = metric, then lower journey time, then Panama; record which tie step resolved it. The final Panama tie-break is a deterministic CONVENTION — disclose it as such in `Selection`/messaging, not as evidence Panama is superior
     - Deadline-miss: when no option is feasible, make no selection, identify the faster available route by minimum journey time, and state clearly that NEITHER route meets the deadline
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 11.10_
 
 - [ ] 7. Deterministic explanation (`src/canalcast/explain.py`)
-  - [ ] 7.1 Implement `explain(result, max_words=120)` deriving every value solely from the current `ComparisonResult`
+  - [~] 7.1 Implement `explain(result, max_words=120)` deriving every value solely from the current `ComparisonResult`
     - No runtime network call; ≤120 words; omit and name missing values (never invent); never imply forecast/prediction
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5_
 
@@ -103,33 +103,33 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - **Property 14: optional-series absence does not block the comparison** — _Requirements 4.4, 4.5_
     - Both-miss deadline case: assert faster route identified AND "neither meets the deadline" statement present, no selection made — _Requirements 11.5_
 
-- [ ] 9. Checkpoint - core complete and gated
+- [~] 9. Checkpoint - core complete and gated
   - Ensure all core tests pass. The UI phase (Tasks 10+) MUST NOT begin until this checkpoint is green (Requirements 19.1, 19.2). Ask the user if questions arise.
 
 - [ ] 10. Streamlit presets and controls (`src/canalcast/ui/controls.py`)
-  - [ ] 10.1 Implement presets and custom scenario
+  - [~] 10.1 Implement presets and custom scenario
     - Normal-reference preset ⇒ draft 50.0 ft, 36 slots/day; October 2026 snapshot ⇒ draft 49.0 ft, 33 slots/day; custom ⇒ user sets draft and whole booking-slot count directly; missing required custom input disables the dependent calc and states in plain language what is needed
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6_
-  - [ ] 10.2 Implement scenario input controls with range enforcement
+  - [~] 10.2 Implement scenario input controls with range enforcement
     - Controls for route, speed (>0), load factor ([0,1]), bunker price (>0), waiting duration (≥0 days), deadline (>0 days), Selection_Priority (exactly the three values), Suez availability (available/unavailable); route selection restricted to OD_Pairs with both distances; in-range change recomputes and replaces results; out-of-range input rejected, last valid scenario retained, offending input indicated
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7_
 
 - [ ] 11. Streamlit results, disclosure, and charts (`src/canalcast/ui/views.py`, `src/canalcast/ui/charts.py`)
-  - [ ] 11.1 Implement side-by-side results view and disclosure panel (`views.py`)
+  - [~] 11.1 Implement side-by-side results view and disclosure panel (`views.py`)
     - Panama and Suez in two adjacent columns (Panama first), each with exactly the five metrics + units; unavailable calcs named with no substitution; infeasible options show explanation + undefined cost/TEU; display exact text "Scenario tool — not a forecast."
     - Disclosure panel: per-input rationale/status/data date; excluded cost items (tolls, insurance, others) and fuel-combustion-CO2-only (not lifecycle); no shipping-line name/logo; carrier examples labeled Carrier A/B/C; render the Panama tie-break convention disclosure; accessible palette (≥4.5:1 normal, ≥3:1 large text)
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 15.1, 15.2, 15.3, 15.4, 15.5, 17.6_
-  - [ ] 11.2 Implement ONI/RONI historical charts (`charts.py`)
+  - [~] 11.2 Implement ONI/RONI historical charts (`charts.py`)
     - ONI and RONI as two visually distinct labeled series, never combined/averaged/summed; unavailable series omitted with in-chart note naming it; all-unavailable ⇒ suppress chart with note and keep app running; no text implying an ENSO index predicts/forecasts/causes canal restrictions; label each chart as historical observations and state historical replay is not model validation
     - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5_
 
 - [ ] 12. Wire the Streamlit app (`app.py`)
-  - [ ] 12.1 Compose loader → core → explanation → UI in `app.py`
+  - [~] 12.1 Compose loader → core → explanation → UI in `app.py`
     - Load data, build scenario from controls/presets, call `compare_od_pair`, render views/charts and the ≤120-word explanation; UI imports the core, core never imports Streamlit
     - _Requirements: 17.1, 19.1, 19.2_
 
 - [ ] 13. Deployment artifacts and instructions
-  - [ ] 13.1 Create a pinned `requirements.txt` and document local run + Streamlit deploy in the README
+  - [~] 13.1 Create a pinned `requirements.txt` and document local run + Streamlit deploy in the README
     - Every dependency pinned to an exact version (`==`), no open ranges; local run `pip install -r requirements.txt` then `streamlit run app.py`; entry point `app.py`; no public endpoint beyond localhost
     - _Requirements: 19.3, 19.5, 19.6, 19.7, 19.8_
 

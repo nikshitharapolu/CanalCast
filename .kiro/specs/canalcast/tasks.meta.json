@@ -1,0 +1,250 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Define `Status` enum and `ProvenancedValue` with value/unit/rationale/status plus optional `retrieved_on`, `method`, `derived_from`, `derivation`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862879360
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862889670
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862968183
+      }
+    ],
+    "1.2 Define domain records `RouteOption`, `ODPair`, `EmissionFactor`, `CanalState`, `ContainerUnit`, `Constants`, `OptionalSeries`, `LoadResult`, `Scenario`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862879444
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862972495
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863149946
+      }
+    ],
+    "1.3 Define the `Unavailable` type and `ResultOrUnavailable` alias (reason + missing_inputs + invalid_inputs)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881240
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862973686
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863026631
+      }
+    ],
+    "2.1 Implement required-data loading (`load_required`) reading routes, constants, canal_states, container_units, emission_factors read-only from `data/`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881400
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863155334
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863519924
+      }
+    ],
+    "2.2 Implement provenance validation on every Model_Input": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881491
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863156050
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863520843
+      }
+    ],
+    "2.3 Implement optional-series loading (`load_optional`) and assemble `load_all` into a `LoadResult`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881532
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863524306
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863642110
+      }
+    ],
+    "3. Checkpoint - loader and models": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881577
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863851467
+      }
+    ],
+    "4.1 Implement time functions: `sailing_time_hours` and `journey_time_hours`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881605
+      }
+    ],
+    "4.2 Implement fuel functions: `fuel_rate_t_per_day`, `sailing_fuel_t`, and waiting/canal fuel line items": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881629
+      }
+    ],
+    "4.3 Implement cost and TEU functions: `voyage_fuel_cost_usd`, `loaded_teu`, `fuel_cost_per_teu_usd`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881655
+      }
+    ],
+    "4.4 Implement CO2 function `co2_tank_to_wake_t` and container-to-TEU conversion": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881703
+      }
+    ],
+    "5.1 Define `JourneyTimeBreakdown`, `FuelBreakdown`, `OptionResult`, `Selection`, `ComparisonResult`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881733
+      }
+    ],
+    "6.1 Implement `compute_option` assembling a full `OptionResult` from the calculation functions": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881764
+      }
+    ],
+    "6.2 Implement `compare_od_pair` with priority selection, tie handling, and deadline handling": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881795
+      }
+    ],
+    "7.1 Implement `explain(result, max_words=120)` deriving every value solely from the current `ComparisonResult`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881820
+      }
+    ],
+    "9. Checkpoint - core complete and gated": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881866
+      }
+    ],
+    "10.1 Implement presets and custom scenario": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881896
+      }
+    ],
+    "10.2 Implement scenario input controls with range enforcement": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881920
+      }
+    ],
+    "11.1 Implement side-by-side results view and disclosure panel (`views.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881948
+      }
+    ],
+    "11.2 Implement ONI/RONI historical charts (`charts.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862881973
+      }
+    ],
+    "12.1 Compose loader → core → explanation → UI in `app.py`": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862882008
+      }
+    ],
+    "13.1 Create a pinned `requirements.txt` and document local run + Streamlit deploy in the README": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792862882058
+      }
+    ],
+    "1. Typed domain models and provenance (`src/canalcast/models.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863149983
+      }
+    ],
+    "2. Data_Loader: all file I/O with provenance (`src/canalcast/loader.py`)": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863642157
+      }
+    ],
+    "2.4 Write loader unit tests": [
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863650913
+      },
+      {
+        "executionId": "f8cfb443-fd25-4ef0-8917-79649f9208ff",
+        "chatSessionId": "sess_39212b16-44c1-4436-b3a6-39ad6f9d48d4",
+        "timestamp": 1792863847944
+      }
+    ]
+  }
+}
