@@ -1,5 +1,10 @@
-"""Task 15.1 regression tests: voyage cost and CO2 need resolved total fuel."""
+"""Task 15.1 regression tests: voyage cost and CO2 need resolved total fuel.
 
+The shipped constants now carry waiting and canal fuel rates, so the
+missing-rate behavior is exercised with those two rates removed.
+"""
+
+import dataclasses
 import math
 from pathlib import Path
 
@@ -14,20 +19,23 @@ DATA = load_all(Path(__file__).resolve().parents[1] / "data").required
 STATE = next(s for s in DATA.canal_states if s.state == "current_oct2026")
 HFO = next(f for f in DATA.emission_factors if f.fuel_type == "HFO")
 PAIR = next(p for p in DATA.od_pairs if p.route_id == "shanghai_boston")
+NO_RATES = dataclasses.replace(
+    DATA.constants, waiting_fuel_t_per_day=None, canal_fuel_t_per_day=None
+)
 
 
-def _run(canal_h: float, priority: str = "fastest"):
+def _run(canal_h: float, priority: str = "fastest", constants=DATA.constants):
     scenario = Scenario(
         od_pair_id=PAIR.route_id, speed_kn=18.0, load_factor=0.85,
         bunker_price_usd_per_t=876.5, canal_duration_h=canal_h,
         waiting_duration_h=0.0, deadline_h=720.0, suez_available=True,
         selection_priority=priority, fuel_type="HFO", canal_state=STATE,
     )
-    return compare_od_pair(PAIR, scenario, DATA.constants, HFO, STATE)
+    return compare_od_pair(PAIR, scenario, constants, HFO, STATE)
 
 
-def test_default_canal_time_without_rate_leaves_voyage_metrics_unavailable():
-    result = _run(12.0)
+def test_canal_time_without_rate_leaves_voyage_metrics_unavailable():
+    result = _run(12.0, constants=NO_RATES)
     for option in (result.panama, result.suez):
         for value in (option.voyage_fuel_cost_usd, option.fuel_cost_per_teu_usd,
                       option.co2_tank_to_wake_t):
@@ -51,4 +59,4 @@ def test_zero_canal_time_resolves_totals_from_formulas():
 
 @pytest.mark.parametrize("priority", ["lowest_cost_per_teu", "lowest_co2"])
 def test_cost_and_co2_priorities_never_select_on_sailing_only_values(priority):
-    assert _run(12.0, priority).selection.selected_option is None
+    assert _run(12.0, priority, constants=NO_RATES).selection.selected_option is None

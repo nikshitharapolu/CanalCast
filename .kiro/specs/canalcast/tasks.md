@@ -183,6 +183,13 @@ This plan builds CanalCast bottom-up and core-first. Phases 1–4 deliver the pu
     - Tests: write Property 16 as one Hypothesis test tagged `# Feature: canalcast, Property 16: ...`. Suez journey time stays unchanged as waiting varies, and Panama satisfies `math.isclose(jt(w2), jt(w1) + (w2 - w1), rel_tol=1e-9)`. Worked example: Shanghai → New York, 18 kn, 12 h canal time on both routes, 40-day deadline, priority "fastest". 3 days of Panama waiting selects Panama (28.1 vs 29.2 days); 5 days selects Suez (30.1 vs 29.2 days); the break-even is 96.7 h. Also test that a missing waiting value leaves Panama undetermined with no false "neither route" message while Suez still computes, and that the Suez result is identical whether waiting is present, zero, missing, or invalid.
     - _Requirements: 6.5–6.7, 6.11–6.13, 7.7, 13.1, 15.2, 18.10; Design: Property 16 and "Deadline status and selection outcomes"; Baseline report finding 10 (`reports/2026-10-24-baseline-metrics.md`)._
 
+- [x] 16. Supply sourced waiting and canal fuel rates (demo readiness)
+  - [x] 16.1 Add `waiting_fuel_t_per_day` and `canal_fuel_t_per_day` to `data/constants.csv` and load them as optional computational constants
+    - Derive both from the ICCT 2013-2015 methodology (Appendices C, D, G, H), container 8,000-12,000 TEU bin: anchor phase for waiting (1,630 kW auxiliary + 520 kW boiler), manoeuvring phase for canal transit (2,780 kW + 520 kW), fuel per kWh implied by the ICCT CO2 factors divided by 3.114. Status `approximate`; record the derivation, the size-bin caveat, and that the canal rate is a lower bound (no main-engine propulsion).
+    - `loader.py`: parse the two keys into the named `Constants` fields when present; never require them, so an absent row still leaves the line item unresolved (Req 7.5).
+    - Tests: rates load with source and status; canal and Panama waiting fuel add exactly rate x days; missing-rate behavior is kept under test by removing the rates from `Constants`; rendered default view shows numeric voyage totals and the lower-bound disclosure.
+    - _Requirements: 1.5, 2.1, 7.4, 7.5, 8.1, 9.1, 15.1_
+
 ## Notes
 
 - Tasks marked with `*` are optional test sub-tasks and are not auto-implemented by the code-generation agent; core correctness still depends on running them.

@@ -1,5 +1,6 @@
 """Task 15.2 regression tests: deadline and eligibility outcomes."""
 
+import dataclasses
 from pathlib import Path
 
 from src.canalcast.comparison import _build_selection, compare_od_pair
@@ -10,9 +11,13 @@ DATA = load_all(Path(__file__).resolve().parents[1] / "data").required
 STATE = next(s for s in DATA.canal_states if s.state == "current_oct2026")
 HFO = next(f for f in DATA.emission_factors if f.fuel_type == "HFO")
 PAIRS = {p.route_id: p for p in DATA.od_pairs}
+NO_RATES = dataclasses.replace(
+    DATA.constants, waiting_fuel_t_per_day=None, canal_fuel_t_per_day=None
+)
 
 
-def _run(route_id, deadline_h, suez_available=True, canal_h=0.0, priority="fastest"):
+def _run(route_id, deadline_h, suez_available=True, canal_h=0.0, priority="fastest",
+         constants=DATA.constants):
     scenario = Scenario(
         od_pair_id=route_id, speed_kn=18.0, load_factor=0.85,
         bunker_price_usd_per_t=876.5, canal_duration_h=canal_h,
@@ -20,7 +25,7 @@ def _run(route_id, deadline_h, suez_available=True, canal_h=0.0, priority="faste
         suez_available=suez_available, selection_priority=priority,
         fuel_type="HFO", canal_state=STATE,
     )
-    return compare_od_pair(PAIRS[route_id], scenario, DATA.constants, HFO, STATE)
+    return compare_od_pair(PAIRS[route_id], scenario, constants, HFO, STATE)
 
 
 def test_missing_deadline_is_undetermined_not_a_miss():
@@ -49,7 +54,8 @@ def test_both_available_routes_missing_names_the_faster_route():
 
 
 def test_unavailable_priority_metric_blocks_selection():
-    sel = _run("shanghai_boston", 720.0, canal_h=12.0, priority="lowest_co2").selection
+    sel = _run("shanghai_boston", 720.0, canal_h=12.0, priority="lowest_co2",
+               constants=NO_RATES).selection
     assert sel.outcome == "priority_metric_unavailable"
     assert sel.selected_option is None
     assert any("canal_fuel_t_per_day" in v for v in sel.unresolved_inputs.values())
