@@ -6,7 +6,7 @@ Hackachusetts 2026 · Track: **Climate Tech & Clean Energy** · Built with Kiro
 
 **[Live Demo](https://shipping-route-sim.streamlit.app/)**
 
-Demo video (under 3 minutes): PASTE_PUBLIC_VIDEO_LINK
+Demo video (under 3 minutes): https://youtu.be/9XprS2NFyBI
 
 <!-- Add a screenshot once the UI is final:
 ![CanalCast comparing Panama and Suez](docs/screenshot.png)
